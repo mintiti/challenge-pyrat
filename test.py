@@ -9,3 +9,8 @@ if __name__ == '__main__':
     buffer = ranked_based.Experience(conf)
     print(buffer)
 
+    for k in range(50):
+        buffer.store(('st', 'k', k, 'st+1', k))
+    print(buffer.sample(50))
+
+
