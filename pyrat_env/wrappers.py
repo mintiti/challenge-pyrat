@@ -58,9 +58,9 @@ class MatricizePositions(ObservationWrapper):
 
     def observation(self, observation):
         ret = []
+        ret.append(observation['Maze_left'])
         ret.append(observation['Maze_up'])
         ret.append(observation['Maze_right'])
-        ret.append(observation['Maze_left'])
         ret.append(observation['Maze_down'])
         ret.append(observation['pieces_of_cheese'])
         player1_score_matrix = np.full_like(observation['pieces_of_cheese'], observation['player1_score'])
