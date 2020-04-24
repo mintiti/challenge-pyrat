@@ -80,8 +80,15 @@ class PyratEnv(gym.Env):
     metadata = {'render.modes': ['human', 'none']}
     reward_range = (-1, 1)
 
-    def __init__(self, width=21, height=15, nb_pieces_of_cheese=41, max_turns=2000, no_mud=True):
+    def __init__(self, width=21, height=15, nb_pieces_of_cheese=41, max_turns=2000, target_density = 0.7, connected= True, symmetry = True, mud_density = 0.7, mud_range = 10, maze_file = "", start_random = False):
         self.max_turns = max_turns
+        self.target_density = target_density
+        self.connected = connected
+        self.symmetry = symmetry
+        self.mud_density = mud_density
+        self.mud_range = mud_range
+        self.maze_file = maze_file
+        self.start_random = start_random
         self.turn = 0
         self.maze = None
         self.maze_dimension = (width, height)
@@ -96,20 +103,16 @@ class PyratEnv(gym.Env):
         self.player1_moves = 0
         self.player2_moves = 0
         self.random_seed = random.randint(0, sys.maxsize)
-        self.width, self.height, self.pieces_of_cheese, self.maze = generate_maze(width, height, 0.7,
-                                                                                  True, True,
-                                                                                  0.7, 10, "",
+        self.width, self.height, self.pieces_of_cheese, self.maze = generate_maze(self.maze_dimension[0], self.maze_dimension[1], self.target_density,
+                                                                                  self.connected, self.symmetry,
+                                                                                  self.mud_density, self.mud_range, self.maze_file,
                                                                                   self.random_seed)
         self.pieces_of_cheese, self.player1_location, self.player2_location = generate_pieces_of_cheese(
-            nb_pieces_of_cheese, width, height,
-            True,
+            self.nb_pieces_of_cheese, self.maze_dimension[0], self.maze_dimension[1],
+            self.symmetry,
             self.player1_location,
             self.player2_location,
-            False)
-        if no_mud:
-            for start in self.maze:
-                for end in self.maze[start]:
-                    self.maze[start][end] = 1
+            self.start_random)
 
         # Wrapper attributes
         # Create the maze matrix
@@ -178,19 +181,19 @@ class PyratEnv(gym.Env):
         self.turn = 0
         self.pieces_of_cheese = []
         self.width, self.height, self.pieces_of_cheese, self.maze = generate_maze(self.maze_dimension[0],
-                                                                                  self.maze_dimension[1], 0.7,
-                                                                                  True, True,
-                                                                                  0.7, 10, "",
+                                                                                  self.maze_dimension[1], self.target_density,
+                                                                                  self.connected, self.symmetry,
+                                                                                  self.mud_density, self.mud_range, self.maze_file,
                                                                                   self.random_seed)
-        self.pieces_of_cheese, self.player1_location, self.player2_location = generate_pieces_of_cheese(args.pieces,
+        self.pieces_of_cheese, self.player1_location, self.player2_location = generate_pieces_of_cheese(self.nb_pieces_of_cheese,
                                                                                                         self.maze_dimension[
                                                                                                             0],
                                                                                                         self.maze_dimension[
                                                                                                             1],
-                                                                                                        True,
+                                                                                                        self.symmetry,
                                                                                                         self.player1_location,
                                                                                                         self.player2_location,
-                                                                                                        False)
+                                                                                                        self.start_random)
         # Reset player turns, score, misses
         self.player1_score, self.player2_score, self.player1_misses, self.player2_misses, self.player1_moves, self.player2_moves = 0, 0, 0, 0, 0, 0
         self.player1_last_move = None
