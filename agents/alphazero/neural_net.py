@@ -17,7 +17,6 @@ args = dotdict({
     'epochs': 10,
     'batch_size': 64,
     'cuda': torch.cuda.is_available(),
-    'num_channels': 512,
     'half_precision' : True
 })
 
@@ -104,7 +103,7 @@ class ResidualNet(NeuralNet):
     def train(self, examples):
         optimizer = optim.Adam(self.nn.parameters())
 
-        for epoch in args.epochs():
+        for epoch in range(args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
             self.nn.train()
             data_time = AverageMeter()
@@ -168,10 +167,14 @@ class ResidualNet(NeuralNet):
     def predict(self, board):
         start = time.time()
         with torch.no_grad():
+            board = torch.Tensor([board])
+            if args.cuda:
+                board = board.cuda()
             self.nn.eval()
-            p, v = self.nn(torch.Tensor([board]))
-        print(f'PREDICTION TIME TAKEN : {time.time() - start}')
-        return p,v
+            p, v = self.nn(board)
+        #print(f'PREDICTION TIME TAKEN : {time.time() - start}')
+
+        return torch.exp(p).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
     def loss_pi(self, targets, outputs):
         return -torch.sum(targets*outputs)/targets.size()[0]
