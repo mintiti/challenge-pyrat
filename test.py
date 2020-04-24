@@ -1,16 +1,23 @@
-import agents.prioritized_replay.rank_based as ranked_based
+from agents.alphazero.alphazerogeneral.pyrat.PyratGame import PyratGame
+from agents.alphazero.alphazerogeneral import MCTS2
+from pyrat_env.envs import PyratEnv
+from pyrat_env.wrappers import AlphaZero
+import numpy as np
+import random
+
 if __name__ == '__main__':
+    env = AlphaZero(PyratEnv())
+    pyratgame = PyratGame(env)
+    obs = pyratgame.getInitBoard()
+    player = 1
 
-    conf = {'size': 50,
-            'learn_start': 10,
-            'partition_num': 5,
-            'total_step': 100,
-            'batch_size': 4}
-    buffer = ranked_based.Experience(conf)
-    print(buffer)
+    for i in range(1500):
+        p1_action = random.randint(0,3)
+        p2_action = random.randint(0,3)
+        obs, player = pyratgame.getNextState(obs, player, p1_action, p2_action)
 
-    for k in range(50):
-        buffer.store(('st', 'k', k, 'st+1', k))
-    print(buffer.sample(50))
+    print("number of turns",obs[10])
+
+
 
 
