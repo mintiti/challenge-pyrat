@@ -42,7 +42,10 @@ class MCTS2():
 
         counts = [x**(1./temp) for x in counts]
         counts_sum = float(sum(counts))
-        probs = [x/counts_sum for x in counts]
+        if counts_sum != 0:
+            probs = [x/counts_sum for x in counts]
+        else :
+            probs = [1./self.game.getActionSize()]*self.game.getActionSize()
         return probs
 
 
@@ -112,13 +115,14 @@ class MCTS2():
                     best_act = a
 
         a = best_act
-        if previous_move : # If it's the python's turn
+        if previous_move != None: # If it's the python's turn
             next_s, next_player = self.game.getNextState(canonicalBoard, 1, a, previous_move= previous_move)
+            previous_move = None
         else:
             next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
         next_s = self.game.getCanonicalForm(next_s, next_player)
 
-        if previous_move :
+        if previous_move != None:
             v = self.search(next_s)
         else :
             v = self.search(next_s, previous_move = a)

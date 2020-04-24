@@ -17,7 +17,7 @@ class Coach2():
     def __init__(self, game, nnet, args):
         self.game = game
         self.nnet = nnet
-        self.pnet = self.nnet.__class__(self.game)  # the competitor network
+        self.pnet = self.nnet.__class__(args.filters,args.residual_blocks)  # the competitor network
         self.args = args
         self.mcts = MCTS2(self.game, self.nnet, self.args)
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
@@ -87,6 +87,7 @@ class Coach2():
                 end = time.time()
     
                 for eps in range(self.args.numEps):
+                    print(f"starting episode {eps}")
                     self.mcts = MCTS2(self.game, self.nnet, self.args)   # reset search tree
                     iterationTrainExamples += self.executeEpisode()
     
@@ -124,8 +125,8 @@ class Coach2():
 
             print('PITTING AGAINST PREVIOUS VERSION')
             arena = Arena2(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
-            pwins, nwins, draws = arena.playGames(self.args.arenaCompare)
+                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game, display= lambda x : print(x))
+            pwins, nwins, draws = arena.playGames(self.args.arenaCompare, verbose = True)
 
             print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
             if pwins+nwins == 0 or float(nwins)/(pwins+nwins) < self.args.updateThreshold:

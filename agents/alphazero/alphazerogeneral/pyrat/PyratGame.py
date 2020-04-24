@@ -175,9 +175,9 @@ class PyratGame(Game):
         Returns:
             symmForms: a list of [(board,pi)] where each tuple is a symmetrical
                        form of the board and the corresponding pi vector. This
-                       is used when training the neural network from examples.
+                        is used when training the neural network from examples.
         """
-        pass
+        return [(board,pi)]
 
     def stringRepresentation(self, board):
         """

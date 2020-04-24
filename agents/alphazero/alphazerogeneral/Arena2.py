@@ -1,6 +1,7 @@
 import numpy as np
 from .pytorch_classification.utils import Bar, AverageMeter
 import time
+from tqdm.auto import trange
 
 class Arena2():
     """
@@ -42,8 +43,8 @@ class Arena2():
             it+=1
             if verbose:
                 assert(self.display)
-                print("Turn ", str(it), "Player ", str(curPlayer))
-                self.display(board)
+                #print("Turn ", str(it), "Player ", str(curPlayer))
+                #self.display(board)
             action = players[curPlayer+1](self.game.getCanonicalForm(board, curPlayer))
 
             valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer),1)
@@ -60,8 +61,10 @@ class Arena2():
 
         if verbose:
             assert(self.display)
-            print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
-            self.display(board)
+            print(f"Game over: Turn {board[10][0][0]}", "Result ", str(self.game.getGameEnded(board, 1)))
+            print(f"""Rat score : {board[5][0][0]}
+Python score : {board[6][0][0]}""")
+            self.display(board[0::4,:,:])
         return curPlayer*self.game.getGameEnded(board, curPlayer)
 
     def playGames(self, num, verbose=False):
@@ -75,7 +78,7 @@ class Arena2():
             draws:  games won by nobody
         """
         eps_time = AverageMeter()
-        bar = Bar('Arena.playGames', max=num)
+        #bar = Bar('Arena.playGames', max=num)
         end = time.time()
         eps = 0
         maxeps = int(num)
@@ -84,7 +87,7 @@ class Arena2():
         oneWon = 0
         twoWon = 0
         draws = 0
-        for _ in range(num):
+        for _ in trange(num, desc = "Pitting new and old agents", unit = "game"):
             gameResult = self.playGame(verbose=verbose)
             if gameResult==1:
                 oneWon+=1
@@ -96,9 +99,9 @@ class Arena2():
             eps += 1
             eps_time.update(time.time() - end)
             end = time.time()
-            bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps, maxeps=maxeps, et=eps_time.avg,
-                                                                                                       total=bar.elapsed_td, eta=bar.eta_td)
-            bar.next()
+            #bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps, maxeps=maxeps, et=eps_time.avg,
+                                                                                                       #total=bar.elapsed_td, eta=bar.eta_td)
+            #bar.next()
 
         self.player1, self.player2 = self.player2, self.player1
         
@@ -114,10 +117,10 @@ class Arena2():
             eps += 1
             eps_time.update(time.time() - end)
             end = time.time()
-            bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps, maxeps=maxeps, et=eps_time.avg,
-                                                                                                       total=bar.elapsed_td, eta=bar.eta_td)
-            bar.next()
+            #bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps, maxeps=maxeps, et=eps_time.avg,
+                                                                                                       #total=bar.elapsed_td, eta=bar.eta_td)
+            #bar.next()
             
-        bar.finish()
+        #bar.finish()
 
         return oneWon, twoWon, draws
