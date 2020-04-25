@@ -177,7 +177,8 @@ class PyratGame(Game):
                        form of the board and the corresponding pi vector. This
                         is used when training the neural network from examples.
         """
-        return [(board,pi)]
+        symmetries = Symmetries(board, pi)
+        return symmetries()
 
     def stringRepresentation(self, board):
         """
@@ -188,7 +189,7 @@ class PyratGame(Game):
             boardString: a quick conversion of board to a string format.
                          Required by MCTS for hashing.
         """
-        return str(board)
+        return board.tostring()
 
     def _make_move(self, rat_action, python_action):
         """Makes the players move, then checks if cheeses have been taken and
@@ -230,3 +231,76 @@ class PyratGame(Game):
             self.current_board[4][python_position[0][0]][python_position[1][0]] = 0
 
         self.rat_action = None
+
+
+class Symmetries :
+    def __init__(self, obs, pi):
+        self.original_obs = obs
+        self.original_pi = pi
+    def _rotate_right_obs(self, obs):
+        obs = np.rot90(obs, -1, axes= (1, 2))
+        obs[0], obs[1], obs[2], obs[3] = obs[3], obs[0], obs[1], obs[2]
+        return obs
+
+    def _rotate_right_pi(self,pi):
+        pi[0],pi[1],pi[2],pi[3] = pi[3],pi[0],pi[1],pi[2]
+        return pi
+
+    def _vertical_flip_obs(self, obs):
+        obs = np.flip(obs, axis= 2)
+        obs[0] , obs[2] = obs[2], obs[0]
+        return obs
+
+    def _vertical_flip_pi(self, pi):
+        pi[0],pi[2] = pi[2],pi[0]
+        return pi
+
+    def _vertical_flip(self, obs, pi):
+        return self._vertical_flip_obs(obs), self._vertical_flip_pi(pi)
+
+    def _rotate_right(self, obs, pi):
+        return self._rotate_right_obs(obs), self._rotate_right_pi(pi)
+
+
+    def __call__(self):
+        """Outputs all the symmetries of the obs, pi that were given on object instanciation
+        There's 8 symmetries of the board"""
+        obs,pi = self.original_obs, self.original_pi
+        symmetries = [(obs,pi)]
+
+        # Rotate once
+        obs2, pi2 = obs.copy(), pi.copy()
+        obs2,pi2 = self._rotate_right(obs2,pi2)
+        #symmetries.append((obs2, pi2))
+
+        # Rotate twice
+        obs3, pi3 = obs.copy(), pi.copy()
+        obs3,pi3 = self._rotate_right(obs3,pi3)
+        obs3, pi3 = self._rotate_right(obs3, pi3)
+        symmetries.append((obs3, pi3))
+
+        # Rotate 3 times
+        obs4, pi4 = obs.copy(), pi.copy()
+        obs4, pi4 = self._rotate_right(obs4, pi4)
+        obs4, pi4 = self._rotate_right(obs4, pi4)
+        obs4, pi4 = self._rotate_right(obs4, pi4)
+        #symmetries.append((obs4, pi4))
+
+        # Flip vertically
+        obs5, pi5 = obs.copy(), pi.copy()
+        obs5, pi5 = self._vertical_flip(obs5,pi5)
+        symmetries.append((obs5,pi5))
+        # Flip vertically and rotate once
+        obs6, pi6 = obs5.copy(), pi5.copy()
+        obs6, pi6 = self._rotate_right(obs6,pi6)
+        #symmetries.append((obs6, pi6))
+        # Flip vertically and rotate twice
+        obs7, pi7 = obs6.copy(), pi6.copy()
+        obs7, pi7 = self._rotate_right(obs7, pi7)
+        symmetries.append((obs7, pi7))
+        # Flip vertically and rotate 3 times
+        obs8, pi8 = obs7.copy(), pi7.copy()
+        obs8, pi8 = self._rotate_right(obs8, pi8)
+        #symmetries.append((obs8, pi8))
+
+        return symmetries

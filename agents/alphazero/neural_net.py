@@ -15,7 +15,7 @@ args = dotdict({
     'lr': 0.0001,
     'dropout': 0.3,
     'epochs': 10,
-    'batch_size': 64,
+    'batch_size': 512,
     'cuda': torch.cuda.is_available(),
     'half_precision' : True
 })
@@ -39,10 +39,10 @@ class BasicResidualBlock(nn.Module):
 class ValueHead(nn.Module):
     def __init__(self, nb_filters):
         super(ValueHead, self).__init__()
-        self.conv_block = nn.Sequential(nn.Conv2d(nb_filters, 1,(1,1)),
-                                        nn.BatchNorm2d(1),
+        self.conv_block = nn.Sequential(nn.Conv2d(nb_filters, 32,(1,1)),
+                                        nn.BatchNorm2d(32),
                                         nn.ReLU())
-        self.fc_block = nn.Sequential(nn.Linear(15*21,256),
+        self.fc_block = nn.Sequential(nn.Linear(15*21*32,256),
                                       nn.ReLU(),
                                       nn.Linear(256,1))
 
@@ -99,6 +99,11 @@ class ResidualNet(NeuralNet):
         self.nn = AlphaZeroNetwork(nb_filters, nb_res_blocks)
         if args.cuda:
             self.nn.cuda()
+        # if args.half_precision:
+        #     self.nn.half()
+        #     for module in self.nn.modules():
+        #         if isinstance(module, nn.BatchNorm2d):
+        #             module.float()
 
     def train(self, examples):
         optimizer = optim.Adam(self.nn.parameters())
