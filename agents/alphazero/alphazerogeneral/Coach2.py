@@ -87,7 +87,7 @@ class Coach2():
                 end = time.time()
     
                 for eps in range(self.args.numEps):
-                    print(f"starting episode {eps}")
+                    # print(f"starting episode {eps}")
                     self.mcts = MCTS2(self.game, self.nnet, self.args)   # reset search tree
                     iterationTrainExamples += self.executeEpisode()
     

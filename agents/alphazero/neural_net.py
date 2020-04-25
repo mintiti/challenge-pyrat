@@ -12,9 +12,9 @@ import os
 import time
 
 args = dotdict({
-    'lr': 0.0001,
+    'lr': 0.00001,
     'dropout': 0.3,
-    'epochs': 10,
+    'epochs': 2,
     'batch_size': 512,
     'cuda': torch.cuda.is_available(),
     'half_precision' : True
@@ -106,7 +106,8 @@ class ResidualNet(NeuralNet):
         #             module.float()
 
     def train(self, examples):
-        optimizer = optim.Adam(self.nn.parameters())
+        print(len(examples))
+        optimizer = optim.Adam(self.nn.parameters(), lr = args.lr)
 
         for epoch in range(args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
@@ -165,6 +166,16 @@ class ResidualNet(NeuralNet):
                     lpi=pi_losses.avg,
                     lv=v_losses.avg,
                 )
+                print('({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss_pi: {lpi:.4f} | Loss_v: {lv:.3f}'.format(
+                    batch=batch_idx,
+                    size=int(len(examples) / args.batch_size),
+                    data=data_time.avg,
+                    bt=batch_time.avg,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    lpi=pi_losses.avg,
+                    lv=v_losses.avg,
+                ))
                 bar.next()
             bar.finish()
 

@@ -7,7 +7,7 @@ from pyrat_env.wrappers import AlphaZero
 
 args = dotdict({
     'numIters': 1000,
-    'numEps': 20,              # Number of complete self-play games to simulate during a new iteration.
+    'numEps': 100,              # Number of complete self-play games to simulate during a new iteration.
     'tempThreshold': 40,        #
     'updateThreshold': 0.5790,     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'maxlenOfQueue': 1000000,    # Number of game examples to train the neural networks.
@@ -15,20 +15,20 @@ args = dotdict({
     'arenaCompare': 40,         # Number of games to play during arena play to determine if new net will be accepted.
     'cpuct': 1,
 
-    'checkpoint': './temp/6x128/',
+    'checkpoint': './temp/3x64/',
     'load_model': False,
-    'load_folder_file': ('/dev/models/6x128/','best.pth.tar'),
+    'load_folder_file': ('/dev/models/3x64/','best.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
 
     # NN config
-    'residual_blocks' : 6,
-    'filters' : 128,
+    'residual_blocks' : 3,
+    'filters' : 64,
 
 
 })
 
 if __name__ == '__main__':
-    env = PyratEnv(symmetry= False, mud_density=0,start_random= True)
+    env = PyratEnv(symmetry= False, mud_density=0,start_random= True, target_density= 0)
     env = AlphaZero(env)
     game = PyratGame(env)
     nn = ResidualNet(args.filters,args.residual_blocks)
