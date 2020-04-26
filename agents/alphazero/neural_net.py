@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torchviz import make_dot
 from progress.bar import Bar
 from .alphazerogeneral.pytorch_classification.utils import AverageMeter
 from .alphazerogeneral.utils import dotdict
@@ -11,7 +10,6 @@ import numpy as np
 import os
 import time
 from cachetools import LRUCache, cachedmethod
-from cachetools.keys import hashkey
 
 args = dotdict({
     'lr': 0.00001,
