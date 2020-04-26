@@ -12,11 +12,11 @@ class PyratGame(Game):
         2: "R",
         3: 'D'
     }
-    board_transform_dict = {0 : lambda x : np.roll(x,-1, axis = 0), #move to the left
-                            2 :lambda x : np.roll(x, 1,axis=0), # move to the right
-                            1 : lambda x: np.roll(x, 1, axis=1), # move up
-                            3 : lambda x : np.roll(x,-1, axis= 1) # move down
-    }
+    board_transform_dict = {0: lambda x: np.roll(x, -1, axis=0),  # move to the left
+                            2: lambda x: np.roll(x, 1, axis=0),  # move to the right
+                            1: lambda x: np.roll(x, 1, axis=1),  # move up
+                            3: lambda x: np.roll(x, -1, axis=1)  # move down
+                            }
 
     def __init__(self, env):
         """Takes in the Alphazero wrapped version of the pyrat env.
@@ -48,7 +48,6 @@ class PyratGame(Game):
         self.RAT_matrix = np.full((1, 21, 15), RAT)
         self.PYTHON_matrix = np.full((1, 21, 15), PYTHON)
 
-
     def getInitBoard(self):
         """
         Returns:
@@ -74,7 +73,7 @@ class PyratGame(Game):
         """
         return 4
 
-    def getNextState(self, board, player, action, previous_move = None):
+    def getNextState(self, board, player, action, previous_move=None):
         """
         Input:
             board: current board
@@ -85,18 +84,18 @@ class PyratGame(Game):
             nextBoard: board after applying action
             nextPlayer: player who plays in the next turn (should be -player)
         """
-        self.current_board = board
+        self.current_board = np.copy(board)
         self.rat_action = previous_move
         if self.current_board[9][0][0] == PYTHON:
             self.rat_action = previous_move
             python_action = action
-        elif  self.current_board[9][0][0] == RAT:
+        elif self.current_board[9][0][0] == RAT:
             self.rat_action = action
             python_action = previous_move
 
         if previous_move != None:
             # make the move with the previous rat action and the new action
-            self._make_move(self.rat_action, python_action) # move, remove cheese and take care of scores
+            self._make_move(self.rat_action, python_action)  # move, remove cheese and take care of scores
             self.current_board[10] += 1
 
         self.current_board[9] *= -1
@@ -127,17 +126,17 @@ class PyratGame(Game):
                small non-zero value for draw.
 
         """
-        self.board = board
+        self.board = np.copy(board)
         nb_turns = self.current_board[10][0][0]
         p1_score = self.current_board[5][0][0]
         p2_score = self.current_board[6][0][0]
         if player == PYTHON:
-            if nb_turns >=1000:
+            if nb_turns >= 200:
                 if p1_score > p2_score:
                     return 1
                 elif p1_score == p2_score:
                     return 0.00000001
-                else :
+                else:
                     return -1
 
             else:
@@ -207,7 +206,7 @@ class PyratGame(Game):
         if self.current_board[rat_action][rat_position[0][0]][rat_position[1][0]]:
             # Select the right board transform
             board_transform = self.board_transform_dict[rat_action]
-            #apply it to the player's position
+            # apply it to the player's position
             self.current_board[7] = board_transform(self.current_board[7])
 
         python_position = np.where(self.current_board[8] == 1)
@@ -217,43 +216,51 @@ class PyratGame(Game):
             self.current_board[8] = board_transform(self.current_board[8])
 
         # recalculate the scores
-        if self.current_board[4][rat_position[0][0]][rat_position[1][0]]: # check if there's a cheese on player 1
-            if python_position == rat_position :
+        if self.current_board[4][rat_position[0][0]][rat_position[1][0]]:  # check if there's a cheese on player 1
+            if python_position == rat_position:
                 # Add 0.5 to each player's scores
                 self.current_board[5] += 0.5
                 self.current_board[6] += 0.5
             else:
-                self.current_board[5] +=1
+                self.current_board[5] += 1
             self.current_board[4][rat_position[0][0]][rat_position[1][0]] = 0
 
         if self.current_board[4][python_position[0][0]][python_position[1][0]]:
-            self.current_board[6]+= 1
+            self.current_board[6] += 1
             self.current_board[4][python_position[0][0]][python_position[1][0]] = 0
 
         self.rat_action = None
 
 
-class Symmetries :
+class Symmetries:
     def __init__(self, obs, pi):
-        self.original_obs = obs
-        self.original_pi = pi
+        self.original_obs = np.copy(obs)
+        self.original_pi = pi.copy()
+
     def _rotate_right_obs(self, obs):
-        obs = np.rot90(obs, -1, axes= (1, 2))
-        obs[0], obs[1], obs[2], obs[3] = obs[3], obs[0], obs[1], obs[2]
+        obs = np.rot90(obs, -1, axes=(1, 2))
+        original_L = np.copy(obs[0])
+        original_U = np.copy(obs[1])
+        original_R = np.copy(obs[2])
+        original_D = np.copy(obs[3])
+        obs[0], obs[1], obs[2], obs[3] = original_D, original_L, original_U, original_R
         return obs
 
-    def _rotate_right_pi(self,pi):
-        pi[0],pi[1],pi[2],pi[3] = pi[3],pi[0],pi[1],pi[2]
-        return pi
+    def _rotate_right_pi(self, pi):
+        return_pi = [pi[3], pi[0], pi[1], pi[2]]
+        return return_pi
 
     def _vertical_flip_obs(self, obs):
-        obs = np.flip(obs, axis= 2)
-        obs[0] , obs[2] = obs[2], obs[0]
+        obs = np.flip(obs, axis=2)
+        original_up = np.copy(obs[1])
+        original_down = np.copy(obs[3])
+        obs[1], obs[3] = original_down, original_up
         return obs
 
     def _vertical_flip_pi(self, pi):
-        pi[0],pi[2] = pi[2],pi[0]
-        return pi
+        return_pi = [pi[0], pi[3], pi[2], pi[1]]
+        pi[0], pi[2] = pi[2], pi[0]
+        return return_pi
 
     def _vertical_flip(self, obs, pi):
         return self._vertical_flip_obs(obs), self._vertical_flip_pi(pi)
@@ -261,21 +268,20 @@ class Symmetries :
     def _rotate_right(self, obs, pi):
         return self._rotate_right_obs(obs), self._rotate_right_pi(pi)
 
-
     def __call__(self):
         """Outputs all the symmetries of the obs, pi that were given on object instanciation
         There's 8 symmetries of the board"""
-        obs,pi = self.original_obs, self.original_pi
-        symmetries = [(obs,pi)]
+        obs, pi = self.original_obs, self.original_pi
+        symmetries = [(obs, pi)]
 
         # Rotate once
         obs2, pi2 = obs.copy(), pi.copy()
-        obs2,pi2 = self._rotate_right(obs2,pi2)
-        #symmetries.append((obs2, pi2))
+        obs2, pi2 = self._rotate_right(obs2, pi2)
+        # symmetries.append((obs2, pi2))
 
         # Rotate twice
         obs3, pi3 = obs.copy(), pi.copy()
-        obs3,pi3 = self._rotate_right(obs3,pi3)
+        obs3, pi3 = self._rotate_right(obs3, pi3)
         obs3, pi3 = self._rotate_right(obs3, pi3)
         symmetries.append((obs3, pi3))
 
@@ -284,16 +290,16 @@ class Symmetries :
         obs4, pi4 = self._rotate_right(obs4, pi4)
         obs4, pi4 = self._rotate_right(obs4, pi4)
         obs4, pi4 = self._rotate_right(obs4, pi4)
-        #symmetries.append((obs4, pi4))
+        # symmetries.append((obs4, pi4))
 
         # Flip vertically
         obs5, pi5 = obs.copy(), pi.copy()
-        obs5, pi5 = self._vertical_flip(obs5,pi5)
-        symmetries.append((obs5,pi5))
+        obs5, pi5 = self._vertical_flip(obs5, pi5)
+        symmetries.append((obs5, pi5))
         # Flip vertically and rotate once
         obs6, pi6 = obs5.copy(), pi5.copy()
-        obs6, pi6 = self._rotate_right(obs6,pi6)
-        #symmetries.append((obs6, pi6))
+        obs6, pi6 = self._rotate_right(obs6, pi6)
+        # symmetries.append((obs6, pi6))
         # Flip vertically and rotate twice
         obs7, pi7 = obs6.copy(), pi6.copy()
         obs7, pi7 = self._rotate_right(obs7, pi7)
@@ -301,6 +307,6 @@ class Symmetries :
         # Flip vertically and rotate 3 times
         obs8, pi8 = obs7.copy(), pi7.copy()
         obs8, pi8 = self._rotate_right(obs8, pi8)
-        #symmetries.append((obs8, pi8))
+        # symmetries.append((obs8, pi8))
 
         return symmetries
