@@ -5,9 +5,9 @@ import torch.optim as optim
 import numpy as np
 import random
 
-PYTHON = 1
-RAT = -1
-
+RAT = 1
+PYTHON = -1
+# TODO : recode this with the multi vecenv version
 
 class QLearningAlgorithm:
     def __init__(self, env, agent1, agent2, total_time_steps=20000, gamma=0.99, epsilon0=1, epsilon_final=0.1,
@@ -81,7 +81,7 @@ class QLearningAlgorithm:
 class SimpleDeepQLearning:
     """Simple Deep Q  learning agent , uses a CNN"""
 
-    def __init__(self, env, player, nn, gamma=0.99, device = 'auto'):
+    def __init__(self, env, player, nn, gamma=0.99, device = 'auto',learning_rate=0.00025):
         self.neural_net = nn
         self.env = env
         self.player = player  # player  1 or player 2, corresponding to being either the rat or the python
@@ -99,8 +99,8 @@ class SimpleDeepQLearning:
         self.neural_net.to(device = self.device)
 
         # Pytorch learning
-        self.criterion = None # TODo
-        self.optimizer = optim.Adam(lr=time_step)
+        self.criterion = nn.MSELoss() # TODo
+        self.lr = learning_rate
         self.gamma = gamma
 
     def add_player_info(self, obs):
@@ -120,9 +120,9 @@ class SimpleDeepQLearning:
         return action
 
         # CAREFUL : Add who the agent is playing
-        pass
 
     def learn(self, batch):
+        optimizer = optim.Adam(self.neural_net.parameters(),lr =self.lr)
         states = []
         next_states = []
         actions = []
@@ -134,12 +134,13 @@ class SimpleDeepQLearning:
             actions.append(a)
             rewards.append(r)
             dones.append(t)
+        rewards *= rewards
         states = torch.Tensor(states)
         next_states = torch.Tensor(next_states)
         actions = torch.Tensor(actions)
         rewards = torch.Tensor(rewards)
         dones = torch.Tensor(dones)
-        self.optimizer.zero_grad()
+        optimizer.zero_grad()
         q_values = self.neural_net(states)
         # TODo : select the q value equal = the action
         with torch.no_grad():
@@ -149,6 +150,11 @@ class SimpleDeepQLearning:
             q_targets = q_values.clone().detach()
             for expected_prediction, action, reward, max , done in zip(q_targets,actions,rewards, maxes, dones):
                 expected_prediction[action] = reward + self.gamma * max * (1- done)
+
+        loss = self.criterion(q_values,q_targets)
+        loss.backward()
+        optimizer.step()
+
 
 
 
