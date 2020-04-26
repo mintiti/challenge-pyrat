@@ -7,13 +7,13 @@ from pyrat_env.wrappers import AlphaZero
 
 args = dotdict({
     'numIters': 1000,
-    'numEps': 100,              # Number of complete self-play games to simulate during a new iteration.
+    'numEps': 10,              # Number of complete self-play games to simulate during a new iteration.
     'tempThreshold': 40,        #
     'updateThreshold': 0.5790,     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'maxlenOfQueue': 1000000,    # Number of game examples to train the neural networks.
     'numMCTSSims': 40,          # Number of games moves for MCTS to simulate.
     'arenaCompare': 40,         # Number of games to play during arena play to determine if new net will be accepted.
-    'cpuct': 4,
+    'cpuct': 2,
 
     'checkpoint': './temp/3x64/',
     'load_model': False,
@@ -28,6 +28,8 @@ args = dotdict({
 })
 
 if __name__ == '__main__':
+    import sys
+    sys.setrecursionlimit(2000)
     env = PyratEnv(symmetry= False, mud_density=0,start_random= True, target_density= 0)
     env = AlphaZero(env)
     game = PyratGame(env)
