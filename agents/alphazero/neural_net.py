@@ -10,23 +10,26 @@ from .alphazerogeneral.NeuralNet import NeuralNet
 import numpy as np
 import os
 import time
+from cachetools import LRUCache, cachedmethod
+from cachetools.keys import hashkey
 
 args = dotdict({
     'lr': 0.00001,
     'dropout': 0.3,
     'epochs': 2,
-    'batch_size': 512,
+    'batch_size': 2048,
     'cuda': torch.cuda.is_available(),
-    'half_precision' : True
+    'half_precision': True
 })
+
 
 class BasicResidualBlock(nn.Module):
     def __init__(self, nb_filters):
         super(BasicResidualBlock, self).__init__()
-        self.conv_module = nn.Sequential(nn.Conv2d(nb_filters,nb_filters,(3,3),padding= 1),
+        self.conv_module = nn.Sequential(nn.Conv2d(nb_filters, nb_filters, (3, 3), padding=1),
                                          nn.BatchNorm2d(nb_filters),
                                          nn.ReLU(),
-                                         nn.Conv2d(nb_filters,nb_filters,(3,3),padding= 1),
+                                         nn.Conv2d(nb_filters, nb_filters, (3, 3), padding=1),
                                          nn.BatchNorm2d(nb_filters))
 
     def forward(self, x):
@@ -36,40 +39,43 @@ class BasicResidualBlock(nn.Module):
 
         return output
 
+
 class ValueHead(nn.Module):
     def __init__(self, nb_filters):
         super(ValueHead, self).__init__()
-        self.conv_block = nn.Sequential(nn.Conv2d(nb_filters, 32,(1,1)),
+        self.conv_block = nn.Sequential(nn.Conv2d(nb_filters, 32, (1, 1)),
                                         nn.BatchNorm2d(32),
                                         nn.ReLU())
-        self.fc_block = nn.Sequential(nn.Linear(15*21*32,256),
+        self.fc_block = nn.Sequential(nn.Linear(15 * 21 * 32, 256),
                                       nn.ReLU(),
-                                      nn.Linear(256,1))
+                                      nn.Linear(256, 1))
 
-    def forward(self,x):
+    def forward(self, x):
         x = self.conv_block(x)
-        x = x.view((x.shape[0],-1))
+        x = x.view((x.shape[0], -1))
         x = self.fc_block(x)
         return torch.tanh(x)
 
+
 class PolicyHead(nn.Module):
-    def __init__(self,nb_filters):
-        super(PolicyHead,self).__init__()
-        self.main_block = nn.Sequential(nn.Conv2d(nb_filters, 2, (1,1)),
+    def __init__(self, nb_filters):
+        super(PolicyHead, self).__init__()
+        self.main_block = nn.Sequential(nn.Conv2d(nb_filters, 2, (1, 1)),
                                         nn.BatchNorm2d(2),
                                         nn.ReLU())
-        self.fc_block = nn.Linear(2*21*15,4)
+        self.fc_block = nn.Linear(2 * 21 * 15, 4)
 
-    def forward(self,x):
+    def forward(self, x):
         x = self.main_block(x)
         x = x.view(x.shape[0], -1)
         x = self.fc_block(x)
         return F.log_softmax(x, dim=1)
 
+
 class AlphaZeroNetwork(nn.Module):
     def __init__(self, nb_filters, nb_residual_blocks):
-        super(AlphaZeroNetwork,self).__init__()
-        self.conv_layer = nn.Sequential(nn.Conv2d(11,nb_filters,(3,3), padding= 1),
+        super(AlphaZeroNetwork, self).__init__()
+        self.conv_layer = nn.Sequential(nn.Conv2d(11, nb_filters, (3, 3), padding=1),
                                         nn.BatchNorm2d(nb_filters),
                                         nn.ReLU())
         self.residual_layers = nn.ModuleList([BasicResidualBlock(nb_filters) for _ in range(nb_residual_blocks)])
@@ -77,7 +83,6 @@ class AlphaZeroNetwork(nn.Module):
         self.policy_head = PolicyHead(nb_filters)
 
     def forward(self, x):
-
         # Residual tower
         x = self.conv_layer(x)
         for res_layer in self.residual_layers:
@@ -89,9 +94,7 @@ class AlphaZeroNetwork(nn.Module):
         # Value head
         value = self.value_head(x)
 
-
         return p_vector, value
-
 
 
 class ResidualNet(NeuralNet):
@@ -104,10 +107,15 @@ class ResidualNet(NeuralNet):
         #     for module in self.nn.modules():
         #         if isinstance(module, nn.BatchNorm2d):
         #             module.float()
+        self.cache = LRUCache(maxsize=200000)
+
+    def clear_cache(self):
+        self.cache.clear()
+        print("position evaluation cache cleared")
 
     def train(self, examples):
         print(len(examples))
-        optimizer = optim.Adam(self.nn.parameters(), lr = args.lr)
+        optimizer = optim.Adam(self.nn.parameters(), lr=args.lr)
 
         for epoch in range(args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
@@ -121,14 +129,14 @@ class ResidualNet(NeuralNet):
             bar = Bar('Training Net', max=int(len(examples) / args.batch_size))
             batch_idx = 0
 
-            while batch_idx < int(len(examples)/args.batch_size):
+            while batch_idx < int(len(examples) / args.batch_size):
                 sample_ids = np.random.randint(len(examples), size=args.batch_size)
                 boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
                 boards = torch.Tensor(boards)
                 target_pis = torch.Tensor(pis)
                 target_vs = torch.Tensor(vs)
 
-                #predict
+                # predict
                 if args.cuda:
                     boards, target_pis, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), target_vs.contiguous().cuda()
 
@@ -166,20 +174,22 @@ class ResidualNet(NeuralNet):
                     lpi=pi_losses.avg,
                     lv=v_losses.avg,
                 )
-                print('({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss_pi: {lpi:.4f} | Loss_v: {lv:.3f}'.format(
-                    batch=batch_idx,
-                    size=int(len(examples) / args.batch_size),
-                    data=data_time.avg,
-                    bt=batch_time.avg,
-                    total=bar.elapsed_td,
-                    eta=bar.eta_td,
-                    lpi=pi_losses.avg,
-                    lv=v_losses.avg,
-                ))
+                print(
+                    '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss_pi: {lpi:.4f} | Loss_v: {lv:.3f}'.format(
+                        batch=batch_idx,
+                        size=int(len(examples) / args.batch_size),
+                        data=data_time.avg,
+                        bt=batch_time.avg,
+                        total=bar.elapsed_td,
+                        eta=bar.eta_td,
+                        lpi=pi_losses.avg,
+                        lv=v_losses.avg,
+                    ))
                 bar.next()
             bar.finish()
+        self.clear_cache()
 
-
+    @cachedmethod(lambda self: self.cache, key=lambda board: board.tostring())
     def predict(self, board):
         start = time.time()
         with torch.no_grad():
@@ -188,15 +198,15 @@ class ResidualNet(NeuralNet):
                 board = board.cuda()
             self.nn.eval()
             p, v = self.nn(board)
-        #print(f'PREDICTION TIME TAKEN : {time.time() - start}')
+        # print(f'PREDICTION TIME TAKEN : {time.time() - start}')
 
         return torch.exp(p).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
     def loss_pi(self, targets, outputs):
-        return -torch.sum(targets*outputs)/targets.size()[0]
+        return -torch.sum(targets * outputs) / targets.size()[0]
 
     def loss_v(self, targets, outputs):
-        return torch.sum((targets-outputs.view(-1))**2)/targets.size()[0]
+        return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
 
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
         filepath = os.path.join(folder, filename)
@@ -206,19 +216,21 @@ class ResidualNet(NeuralNet):
         else:
             print("Checkpoint Directory exists! ")
         torch.save({
-            'state_dict' : self.nn.state_dict(),
+            'state_dict': self.nn.state_dict(),
         }, filepath)
 
     def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py#L98
         filepath = os.path.join(folder, filename)
         if not os.path.exists(filepath):
-            raise("No model in path {}".format(filepath))
+            raise ("No model in path {}".format(filepath))
         map_location = None if args.cuda else 'cpu'
         checkpoint = torch.load(filepath, map_location=map_location)
         self.nn.load_state_dict(checkpoint['state_dict'])
+
+
 if __name__ == '__main__':
-    mock_state  = torch.rand((1,11,21,15))
+    mock_state = torch.rand((1, 11, 21, 15))
 
     net = AlphaZeroNetwork(128, 3)
     out = net(mock_state)
