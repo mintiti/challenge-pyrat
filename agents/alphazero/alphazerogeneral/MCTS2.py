@@ -122,7 +122,7 @@ class MCTS2():
             next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
         next_s = self.game.getCanonicalForm(next_s, next_player)
 
-        print(f"next recursion args : next_s {next_s}, next_player {next_player}")
+        #print(f"next recursion args : next_s {next_s}, next_player {next_player}")
 
         if previous_move != None:
             v = self.search(next_s)
