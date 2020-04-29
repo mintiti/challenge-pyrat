@@ -11,7 +11,6 @@ import numpy as np
 import os
 import time
 from cachetools import LRUCache, cachedmethod
-from cachetools.keys import hashkey
 
 args = dotdict({
     'lr': 0.00001,
