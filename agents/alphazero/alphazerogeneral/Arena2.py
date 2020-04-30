@@ -132,3 +132,4 @@ Python score : {board[6][0][0]}""")
         bar.finish()
 
         return oneWon, twoWon, draws
+

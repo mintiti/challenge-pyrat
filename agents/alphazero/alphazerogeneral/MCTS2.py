@@ -49,7 +49,7 @@ class MCTS2():
         return probs
 
 
-    def search(self, canonicalBoard, previous_move = None):
+    def search(self, canonicalBoard, previous_move = None, current_player = 1):
         """
         This function performs one iteration of MCTS. It is recursively called
         till a leaf node is found. The action chosen at each node is one that
@@ -72,7 +72,7 @@ class MCTS2():
         s = self.game.stringRepresentation(canonicalBoard)
 
         if s not in self.Es:
-            self.Es[s] = self.game.getGameEnded(canonicalBoard, 1)
+            self.Es[s] = self.game.getGameEnded(canonicalBoard, current_player)
         if self.Es[s]!=0:
             # terminal node
             return -self.Es[s]
@@ -80,7 +80,7 @@ class MCTS2():
         if s not in self.Ps:
             # leaf node
             self.Ps[s], v = self.nnet.predict(canonicalBoard)
-            valids = self.game.getValidMoves(canonicalBoard, 1)
+            valids = self.game.getValidMoves(canonicalBoard, current_player)
             self.Ps[s] = self.Ps[s]*valids      # masking invalid moves
             sum_Ps_s = np.sum(self.Ps[s])
             if sum_Ps_s > 0:
@@ -115,19 +115,20 @@ class MCTS2():
                     best_act = a
 
         a = best_act
-        if previous_move != None: # If it's the python's turn
-            next_s, next_player = self.game.getNextState(canonicalBoard, 1, a, previous_move= previous_move)
+        if current_player ==-1: # If it's the python's turn
+            next_s, next_player = self.game.getNextState(canonicalBoard, current_player, a, previous_move= previous_move)
             previous_move = None
         else:
-            next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
+            next_s, next_player = self.game.getNextState(canonicalBoard, current_player, a)
+            previous_move = a
         next_s = self.game.getCanonicalForm(next_s, next_player)
 
-        #print(f"next recursion args : next_s {next_s}, next_player {next_player}")
+        #print(f"next recursion args : next_s {next_s}, next_player {next_player}, previous move is {previous_move}")
 
-        if previous_move != None:
-            v = self.search(next_s)
+        if next_player == 1:
+            v = self.search(next_s, current_player = next_player)
         else :
-            v = self.search(next_s, previous_move = a)
+            v = self.search(next_s, previous_move = previous_move, current_player= next_player)
 
         if (s,a) in self.Qsa:
             self.Qsa[(s,a)] = (self.Nsa[(s,a)]*self.Qsa[(s,a)] + v)/(self.Nsa[(s,a)]+1)
