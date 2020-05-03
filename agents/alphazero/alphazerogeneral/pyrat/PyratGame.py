@@ -93,7 +93,7 @@ class PyratGame(Game):
             self.rat_action = action
             python_action = previous_move
 
-        if previous_move != None:
+        if player == -1:
             # make the move with the previous rat action and the new action
             self._make_move(self.rat_action, python_action)  # move, remove cheese and take care of scores
             self.current_board[10] += 1
@@ -310,3 +310,4 @@ class Symmetries:
         # symmetries.append((obs8, pi8))
 
         return symmetries
+
