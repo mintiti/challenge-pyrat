@@ -5,6 +5,7 @@ from tqdm.auto import trange
 
 
 class Arena2():
+    #TODO : reset the mcts dicts 
     """
     An Arena class where any 2 agents can be pit against each other.
     """
