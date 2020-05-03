@@ -63,7 +63,7 @@ class Arena2():
 
         if verbose:
             assert (self.display)
-            print(f"Game over: Turn {board[10][0][0]}", "Result ", str(self.game.getGameEnded(board, -1)))
+            print(f"\nGame over: Turn {board[10][0][0]}", "Result ", str(self.game.getGameEnded(board, -1)))
             print(f"""Rat score : {board[5][0][0]}
 Python score : {board[6][0][0]}""")
             # self.display(board[0::4,:,:])
