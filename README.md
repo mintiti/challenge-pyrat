@@ -1,6 +1,6 @@
-# Pyrat game environment
+# Pyrat challenge course
 Refactoring on the original game [PyRat](https://github.com/vgripon/PyRat), from the algorithmic discrete maths course taught in IMT Atlantique.  
-This makes it compliant to the Gym API.
+This was done for the UE Introduction to AI
 
 ## Game
 2 rats are in a symmetrical maze and are competing for cheese pieces.  
@@ -13,5 +13,6 @@ You will need :
 * gym
 * numpy
 * pygame
-
-Benji
+* tqdm
+* pytorch 
+* cachetools
