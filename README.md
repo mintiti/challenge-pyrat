@@ -6,10 +6,6 @@ This makes it compliant to the Gym API.
 2 rats are in a symmetrical maze and are competing for cheese pieces.  
 Player with the most cheese pieces at the end of the game wins.
 
-## Installation 
-```bash
-pip install pyrat-env
-```
 
 
 ### Dependencies
