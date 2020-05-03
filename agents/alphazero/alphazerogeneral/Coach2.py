@@ -41,6 +41,7 @@ class Coach2:
         """
         trainExamples = []
         board = self.game.getInitBoard()
+        self.mcts.reset_dict()
         self.curPlayer = 1
         episodeStep = 0
         previous_move = None
