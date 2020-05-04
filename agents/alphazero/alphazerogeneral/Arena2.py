@@ -42,8 +42,6 @@ class Arena2():
         players = [self.player2, None, self.player1]
         curPlayer = 1
         board = self.game.getInitBoard()
-        self.nmcts.reset_dict()
-        self.pmcts.reset_dict()
         it = 0
         previous_move = None
         while self.game.getGameEnded(board, curPlayer) == 0:
@@ -72,6 +70,8 @@ class Arena2():
             print(f"""Rat score : {board[5][0][0]}
 Python score : {board[6][0][0]}""")
             # self.display(board[0::4,:,:])
+        self.nmcts.reset_dict()
+        self.pmcts.reset_dict()
         return self.game.getGameEnded(board, curPlayer)
 
     def playGames(self, num, verbose=False):

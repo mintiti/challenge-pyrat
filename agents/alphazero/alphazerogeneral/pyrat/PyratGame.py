@@ -45,8 +45,8 @@ class PyratGame(Game):
         self.rat_action = None
 
         # Precompute
-        self.RAT_matrix = np.full((1, 21, 15), RAT)
-        self.PYTHON_matrix = np.full((1, 21, 15), PYTHON)
+        self.RAT_matrix = np.full((1, 21, 15), RAT, dtype= np.float16)
+        self.PYTHON_matrix = np.full((1, 21, 15), PYTHON, dtype= np.float16)
 
     def getInitBoard(self):
         """
@@ -55,7 +55,7 @@ class PyratGame(Game):
                         that will be the input to your neural network)
         """
         initial_state = self.env.reset()
-        turns = np.zeros((1, 21, 15))
+        turns = np.zeros((1, 21, 15), dtype= np.float16)
         self.current_board = np.concatenate((initial_state, self.RAT_matrix, turns))
         return self.current_board
 

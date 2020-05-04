@@ -14,7 +14,7 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with PyRat.  If not, see <http://www.gnu.org/licenses/>.
-from .parameters import *
+#from .parameters import *
 import pygame
 import random
 import os
