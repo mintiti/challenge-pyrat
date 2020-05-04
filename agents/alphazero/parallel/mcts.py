@@ -7,24 +7,34 @@ import math
 
 import numpy as np
 
-
+DEFAULT_MCTS_PARAMS = {
+    "temperature" : 1,
+    "add_dirichlet_noise": True,
+    "dirichlet_epsilon" : 0.25,
+    "dirichlet_noise" : 2.5,
+    "num_simulations" : 600,
+    "exploit" : False,
+    "puct_coefficient" : 2,
+    "argmax_tree_policy" : False
+}
 class Node:
-    def __init__(self, action, obs, done, reward, state, mcts, parent=None):
-        self.env = parent.env
+    def __init__(self, action, obs, done, reward, state, mcts, player, parent=None):
+        self.game = parent.game
         self.action = action  # Action used to go to this state
+        self.current_player = player
 
         self.is_expanded = False
         self.parent = parent
         self.children = {}
 
-        self.action_space_size = self.env.action_space.n
+        self.action_space_size = self.game.getActionSize()
         self.child_total_value = np.zeros(
             [self.action_space_size], dtype=np.float32)  # Q
         self.child_priors = np.zeros(
             [self.action_space_size], dtype=np.float32)  # P
         self.child_number_visits = np.zeros(
             [self.action_space_size], dtype=np.float32)  # N
-        self.valid_actions = obs["action_mask"].astype(np.bool)
+        self.valid_actions = [1]*4
 
         self.reward = reward
         self.done = done
@@ -69,7 +79,6 @@ class Node:
         """
         child_score = self.child_Q() + self.mcts.c_puct * self.child_U()
         masked_child_score = child_score
-        masked_child_score[~self.valid_actions] = -np.inf
         return np.argmax(masked_child_score)
 
     def select(self):
@@ -87,12 +96,19 @@ class Node:
         self.is_expanded = True
         self.child_priors = child_priors
 
-    def get_child(self, action, previous_action = None, current_player = 1):
+    def get_child(self, action,  current_player = 1):
         """Gets the child of the current node when action a is done"""
         if action not in self.children:
-            self.env.set_state(self.state)
-            obs, reward, done, _ = self.env.step(action)
-            next_state = self.env.get_state()
+            #self.game.set_state(self.state)
+            #obs, reward, done, _ = self.game.step(action)
+            next_state, next_player = self.game.getNextState(self.state,self.current_player,action, previous_move = self.action)
+            reward = 0
+            game_ended = self.game.getGameEnded(self.state, self.current_player)
+            done = (game_ended != 0)
+            if game_ended == 1 or game_ended == -1:
+                reward = game_ended
+
+            obs  = next_state[:10]
             self.children[action] = Node(
                 state=next_state,
                 action=action,
@@ -100,7 +116,8 @@ class Node:
                 reward=reward,
                 done=done,
                 obs=obs,
-                mcts=self.mcts)
+                mcts=self.mcts,
+                player= next_player)
         return self.children[action]
 
     def backup(self, value):
@@ -115,11 +132,11 @@ class Node:
 
 
 class RootParentNode:
-    def __init__(self, env):
+    def __init__(self, game):
         self.parent = None
         self.child_total_value = collections.defaultdict(float)
         self.child_number_visits = collections.defaultdict(float)
-        self.env = env
+        self.game = game
 
 
 class MCTS:
