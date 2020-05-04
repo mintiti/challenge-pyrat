@@ -4,6 +4,7 @@ from agents.alphazero.neural_net import ResidualNet
 from agents.alphazero.alphazerogeneral.utils import *
 from pyrat_env.envs import PyratEnv
 from pyrat_env.wrappers import AlphaZero
+import torch
 
 args = dotdict({
     'numIters': 1000,
@@ -31,13 +32,12 @@ if __name__ == '__main__':
     env = PyratEnv(symmetry=False, mud_density=0, start_random=True, target_density=0)
     env = AlphaZero(env)
     game = PyratGame(env)
+    nn= ResidualNet(args.filters,args.residual_blocks)
+    nn.load_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
 
-    nn = ResidualNet(args.filters, args.residual_blocks)
-    # nn.load_checkpoint(folder='./temp/3x64/', filename='temp.pth.tar')
-    #
-    # pn = ResidualNet(args.filters, args.residual_blocks)
-    # pn.load_checkpoint(folder='./temp/3x64/', filename='best.pth.tar')
+
+
 
     c = Coach2(game, nn, args)
-
+    c.pnet.load_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
     c.learn()
