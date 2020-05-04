@@ -45,7 +45,7 @@ if __name__ == '__main__':
     writer = SummaryWriter()
 
     # Load the data
-    file = "D:\\IMT\\A2\\UE_AI\\PyRat\\npz\\alphazero_dataset_10k.npz"
+    file = "alphazero_dataset_10k.npz"
     loaded = np.load(file)
     x, y, z = loaded['x'], loaded['y'], loaded['z']
     x = torch.FloatTensor(x)
@@ -71,15 +71,22 @@ if __name__ == '__main__':
 
     optimizer = optim.Adam(net.parameters(), lr=lr)
     epochs = 100
-    for epoch in trange(epochs):
+    for epoch in range(epochs):
+        print(f"Starting epoch {epoch + 1}")
         net.train()
         pi_loss = 0
         v_loss = 0
 
+        # statistics
+        correct_train = 0
+        correct_test =0
+        len_train = float(n)
+        len_test = float(len(supervised_dataset) - n)
+
         for x_batch, y_batch, z_batch in tqdm(train_loader):
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
-            z_batch =  z_batch.to(device)
+            z_batch = z_batch.to(device)
 
             p_vector, v = net(x_batch)
             policy_loss = loss_pi(y_batch, p_vector)
@@ -94,6 +101,11 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()
+
+            # statistics
+            predicted_move = torch.argmax(p_vector, dim =1)
+            correct_moves = torch.argmax(y_batch, dim =1 )
+            correct_train += (predicted_move == correct_moves).sum()
 
         # evaluate on test set
         with torch.no_grad():
@@ -114,25 +126,31 @@ if __name__ == '__main__':
                 validation_pi_loss += policy_loss.item()
                 validation_v_loss += value_loss.item()
 
+                #statistics
+                predicted_move = torch.argmax(p_vector, dim=1)
+                correct_moves = torch.argmax(y_batch, dim=1)
+                correct_test += (predicted_move == correct_moves).sum()
 
         # Record to tensorboard
-        len_test = len(supervised_dataset) - n
-        writer.add_scalar('Test set/value loss',validation_v_loss, epoch )
-        writer.add_scalar('Test set/policy loss', validation_pi_loss, epoch)
+        writer.add_scalar('Test set/value loss/total', validation_v_loss, epoch)
+        writer.add_scalar('Test set/policy loss/total', validation_pi_loss, epoch)
         writer.add_scalar('Test set/total loss', validation_pi_loss + validation_v_loss, epoch)
-        writer.add_scalar('Test set/normalized value loss', validation_v_loss/len_test, epoch)
-        writer.add_scalar('Test set/normalized policy loss', validation_pi_loss/len_test, epoch)
+        writer.add_scalar('Test set/value loss/normalized', validation_v_loss / len_test, epoch)
+        writer.add_scalar('Test set/normalized policy loss', validation_pi_loss / len_test, epoch)
         writer.add_scalar('Test set/normalized total loss', (validation_pi_loss + validation_v_loss) / len_test, epoch)
+        writer.add_scalar('Test set/move prediction accuracy', correct_test/len_test, epoch)
 
-        writer.add_scalar('Train set/value loss',v_loss, epoch )
+        writer.add_scalar('Train set/value loss', v_loss, epoch)
         writer.add_scalar('Train set/policy loss', pi_loss, epoch)
         writer.add_scalar('Train set/total loss', pi_loss + v_loss, epoch)
-        writer.add_scalar('Train set/normalized value loss',v_loss/n, epoch )
-        writer.add_scalar('Train set/normalized policy loss', pi_loss/n, epoch)
-        writer.add_scalar('Train set/normalized total loss', pi_loss + v_loss/n, epoch)
+        writer.add_scalar('Train set/normalized value loss', v_loss / len_train, epoch)
+        writer.add_scalar('Train set/normalized policy loss', pi_loss / len_train, epoch)
+        writer.add_scalar('Train set/normalized total loss', pi_loss + v_loss / n, epoch)
+        writer.add_scalar('Train set/move prediction accuracy', correct_train / len_train, epoch)
 
-        print(f"On epoch {epoch + 1} : value loss {v_loss} and policy loss {pi_loss}")
 
-        if epoch %10 == 0:
-            torch.save(net.state_dict(), f"weights-Supervised-{args.residual_blocks}x{args.filters}-epoch{epoch+1}.pt")
+        print(f"\nOn epoch {epoch + 1} : value loss {v_loss} and policy loss {pi_loss}\nMove prediction accuracy train {correct_train / len_train} and test {correct_test/len_test}")
 
+        if (epoch + 1) % 10 == 0:
+            torch.save({'state_dict': net.state_dict()},
+                       f"weights-Supervised-{args.residual_blocks}x{args.filters}-epoch{epoch + 1}.pt")
