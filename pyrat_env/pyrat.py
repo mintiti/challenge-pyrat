@@ -32,24 +32,8 @@ import signal
 import pygame
 import traceback
 
-if args.import_keras:
-    pass
 
-# Sound effects. There are three sounds corresponding to any combination of players taking pieces of cheese at a given moment
-try:
-    if not(args.nodrawing) and not(args.save_images):
-        pygame.mixer.init(frequency = 44100, size = -16, channels = 1, buffer = 2**12)
-        effect_left = pygame.mixer.Sound("resources/cheese_left.wav")
-        effect_right = pygame.mixer.Sound("resources/cheese_right.wav")
-        effect_both = pygame.mixer.Sound("resources/cheese_both.wav")
-        nosound = False
-    else:
-        1/0
-except:
-    effect_left = ""
-    effect_right = ""
-    effect_both = ""
-    nosound = True
+
 
 # Function to play a sound
 def play_sound(effect):
