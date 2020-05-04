@@ -105,7 +105,7 @@ class ResidualNet(NeuralNet):
         #     for module in self.nn.modules():
         #         if isinstance(module, nn.BatchNorm2d):
         #             module.float()
-        self.cache = LRUCache(maxsize=50000)
+        self.cache = LRUCache(maxsize=200000)
 
     def clear_cache(self):
         self.cache.clear()
