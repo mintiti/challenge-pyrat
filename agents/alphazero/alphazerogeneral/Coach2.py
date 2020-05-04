@@ -129,9 +129,9 @@ class Coach2:
             nmcts = MCTS2(self.game, self.nnet, self.args)
 
             print('PITTING AGAINST PREVIOUS VERSION')
-            arena = Arena2(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                           lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game, display=lambda x: print(x))
-            pwins, nwins, draws = arena.playGames(self.args.arenaCompare, verbose=True)
+            arena = Arena2(pmcts,
+                          nmcts, self.game, display= lambda x : print(x))
+            pwins, nwins, draws = arena.playGames(self.args.arenaCompare, verbose = True)
 
             print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
             if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.args.updateThreshold:

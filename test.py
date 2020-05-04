@@ -1,4 +1,4 @@
-from agents.alphazero.alphazerogeneral.pyrat.PyratGame import PyratGame
+from agents.alphazero.alphazerogeneral.pyrat.PyratGame import PyratGame, Symmetries
 from agents.alphazero.alphazerogeneral import MCTS2
 from agents.alphazero.neural_net import ResidualNet
 from pyrat_env.envs import PyratEnv

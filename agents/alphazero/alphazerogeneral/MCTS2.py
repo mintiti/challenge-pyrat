@@ -20,7 +20,7 @@ class MCTS2():
         self.Vs = {}        # stores game.getValidMoves for board s
 
     def reset_dict(self):
-        print("dictionnaries reset")
+        print("mcts tree statistics reset")
         self.Qsa = {}       # stores Q values for s,a (as defined in the paper)
         self.Nsa = {}       # stores #times edge s,a was visited
         self.Ns = {}        # stores #times board s was visited

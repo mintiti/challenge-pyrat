@@ -10,7 +10,7 @@ class Arena2():
     An Arena class where any 2 agents can be pit against each other.
     """
 
-    def __init__(self, player1, player2, game, display=None):
+    def __init__(self, pmcts, nmcts, game, display=None):
         """
         Input:
             player 1,2: two functions that takes board as input, return action
@@ -22,8 +22,10 @@ class Arena2():
         see othello/OthelloPlayers.py for an example. See pit.py for pitting
         human players/other baselines with each other.
         """
-        self.player1 = player1
-        self.player2 = player2
+        self.pmcts = pmcts
+        self.nmcts = nmcts
+        self.player1 = lambda x: np.argmax(self.pmcts.getActionProb(x, temp=0))
+        self.player2 = lambda x: np.argmax(self.nmcts.getActionProb(x, temp=0))
         self.game = game
         self.display = display
 
@@ -40,6 +42,8 @@ class Arena2():
         players = [self.player2, None, self.player1]
         curPlayer = 1
         board = self.game.getInitBoard()
+        self.nmcts.reset_dict()
+        self.pmcts.reset_dict()
         it = 0
         previous_move = None
         while self.game.getGameEnded(board, curPlayer) == 0:
