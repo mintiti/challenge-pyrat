@@ -20,6 +20,7 @@ class MCTS2():
         self.Vs = {}        # stores game.getValidMoves for board s
 
     def reset_dict(self):
+        print("dictionnaries reset")
         self.Qsa = {}       # stores Q values for s,a (as defined in the paper)
         self.Nsa = {}       # stores #times edge s,a was visited
         self.Ns = {}        # stores #times board s was visited
@@ -89,7 +90,8 @@ class MCTS2():
 
         if s not in self.Ps:
             # leaf node
-            self.Ps[s], v = self.nnet.predict(canonicalBoard)
+            nnet_obs = canonicalBoard[:10]
+            self.Ps[s], v = self.nnet.predict(nnet_obs)
             valids = self.game.getValidMoves(canonicalBoard, current_player)
             self.Ps[s] = self.Ps[s]*valids      # masking invalid moves
             sum_Ps_s = np.sum(self.Ps[s])

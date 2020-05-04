@@ -73,7 +73,7 @@ class PolicyHead(nn.Module):
 class AlphaZeroNetwork(nn.Module):
     def __init__(self, nb_filters, nb_residual_blocks):
         super(AlphaZeroNetwork, self).__init__()
-        self.conv_layer = nn.Sequential(nn.Conv2d(11, nb_filters, (3, 3), padding=1),
+        self.conv_layer = nn.Sequential(nn.Conv2d(10, nb_filters, (3, 3), padding=1),
                                         nn.BatchNorm2d(nb_filters),
                                         nn.ReLU())
         self.residual_layers = nn.ModuleList([BasicResidualBlock(nb_filters) for _ in range(nb_residual_blocks)])
@@ -105,7 +105,7 @@ class ResidualNet(NeuralNet):
         #     for module in self.nn.modules():
         #         if isinstance(module, nn.BatchNorm2d):
         #             module.float()
-        self.cache = LRUCache(maxsize=50000)
+        self.cache = LRUCache(maxsize=200000)
 
     def clear_cache(self):
         self.cache.clear()
@@ -187,7 +187,7 @@ class ResidualNet(NeuralNet):
             bar.finish()
         self.clear_cache()
 
-    @cachedmethod(lambda self: self.cache, key=lambda board: board[:9].tostring())
+    @cachedmethod(lambda self: self.cache, key=lambda board: board.tostring())
     def predict(self, board):
         start = time.time()
         with torch.no_grad():
@@ -228,7 +228,7 @@ class ResidualNet(NeuralNet):
 
 
 if __name__ == '__main__':
-    mock_state = torch.rand((1, 11, 21, 15))
+    mock_state = torch.rand((1, 10, 21, 15))
 
     net = AlphaZeroNetwork(128, 3)
     out = net(mock_state)

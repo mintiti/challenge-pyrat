@@ -140,13 +140,12 @@ class PyratGame(Game):
                     return -1
 
             else:
-                if p1_score + p2_score == 41:
-                    if p1_score > p2_score:
-                        return 1
-                    elif p1_score == p2_score:
-                        return 0.00000001
-                    else:
-                        return -1
+                if p1_score > 20.5:
+                    return 1
+                elif p2_score > 20.5:
+                    return -1
+                elif p1_score == 20.5 and p2_score == 20.5:
+                    return 0.00000001
         return 0
 
     def getCanonicalForm(self, board, player):
