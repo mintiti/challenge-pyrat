@@ -19,13 +19,13 @@ class PyratGame(Game):
                             }
 
     def __init__(self, env):
-        """Takes in the Alphazero wrapped version of the pyrat env.
-        If you didnt, please wrap the env using pyrat_env.wrappers.AlphaZero
+        """Takes in the Alphazero wrapped version of the pyrat game.
+        If you didnt, please wrap the game using pyrat_env.wrappers.AlphaZero
 
-            env : type : PyRatEnv
+            game : type : PyRatEnv
 
             Attributes :
-                - env : the PyRat gym env
+                - game : the PyRat gym game
                 - player : the current player's turn to play
                 - current board : board : tensor of size (9,21,15) with each layer containing :
                             0) Maze_left
