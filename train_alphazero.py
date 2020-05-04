@@ -8,7 +8,7 @@ import torch
 
 args = dotdict({
     'numIters': 1000,
-    'numEps': 10,  # Number of complete self-play games to simulate during a new iteration.
+    'numEps': 20,  # Number of complete self-play games to simulate during a new iteration.
     'tempThreshold': 40,  #
     'updateThreshold': 0.5790,
     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
