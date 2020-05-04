@@ -94,7 +94,7 @@ Python score : {board[6][0][0]}""")
         oneWon = 0
         twoWon = 0
         draws = 0
-        for _ in range(num):
+        for _ in trange(num, desc = "Running evaluation game, part 1", unit = "game"):
             gameResult = self.playGame(verbose=verbose)
             if gameResult == 1:
                 oneWon += 1
@@ -115,7 +115,7 @@ Python score : {board[6][0][0]}""")
 
         self.player1, self.player2 = self.player2, self.player1
 
-        for _ in range(num):
+        for _ in trange(num,desc = "Running evaluation game, part 2", unit = "game"):
             gameResult = self.playGame(verbose=verbose)
             if gameResult == -1:
                 oneWon += 1

@@ -7,6 +7,7 @@ from progress.bar import Bar
 import time, os, sys
 from pickle import Pickler, Unpickler
 from random import shuffle
+from tqdm import trange
 
 
 class Coach2:
@@ -89,7 +90,7 @@ class Coach2:
                 bar = Bar('Self Play', max=self.args.numEps)
                 end = time.time()
 
-                for eps in range(self.args.numEps):
+                for eps in trange(self.args.numEps, desc = "Running self-play episodes", unit = "episode"):
                     print(f"starting episode {eps +1}")
                     self.mcts = MCTS2(self.game, self.nnet, self.args)  # reset search tree
                     iterationTrainExamples += self.executeEpisode()
