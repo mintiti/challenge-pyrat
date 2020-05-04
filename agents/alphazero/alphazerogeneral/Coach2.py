@@ -65,7 +65,7 @@ class Coach2:
             r = self.game.getGameEnded(board, self.curPlayer)
             previous_move = action
             if r!=0:
-                return [(x[0],x[2],r * x[0][9][0][0]) for x in trainExamples]
+                return [(x[0][:10],x[2],r * x[0][9][0][0]) for x in trainExamples]
 
     def learn(self):
         """

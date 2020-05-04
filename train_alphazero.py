@@ -12,7 +12,7 @@ args = dotdict({
     'updateThreshold': 0.5790,
     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'maxlenOfQueue': 50000,  # Number of game examples to train the neural networks.
-    'numMCTSSims': 600,  # Number of games moves for MCTS to simulate.
+    'numMCTSSims': 200,  # Number of games moves for MCTS to simulate.
     'arenaCompare': 20,  # Number of games to play during arena play to determine if new net will be accepted.
     'cpuct': 2,
 
@@ -33,13 +33,11 @@ if __name__ == '__main__':
     game = PyratGame(env)
 
     nn = ResidualNet(args.filters, args.residual_blocks)
-    nn.load_checkpoint(folder='./temp/3x64/', filename='temp.pth.tar')
-
-    pn = ResidualNet(args.filters, args.residual_blocks)
-    pn.load_checkpoint(folder='./temp/3x64/', filename='best.pth.tar')
+    # nn.load_checkpoint(folder='./temp/3x64/', filename='temp.pth.tar')
+    #
+    # pn = ResidualNet(args.filters, args.residual_blocks)
+    # pn.load_checkpoint(folder='./temp/3x64/', filename='best.pth.tar')
 
     c = Coach2(game, nn, args)
-    c.nnet = nn
-    c.pnet = pn
 
     c.learn()
