@@ -57,10 +57,8 @@ class Arena2():
             if valids[action] == 0:
                 print(action)
                 assert valids[action] > 0
-            if curPlayer == 1:
-                board, curPlayer = self.game.getNextState(board, curPlayer, action)
-            elif curPlayer == -1:
-                board, curPlayer = self.game.getNextState(board, curPlayer, action, previous_move=previous_move)
+
+            board, curPlayer = self.game.getNextState(board, curPlayer, action, previous_move=previous_move)
 
             previous_move = action
 
