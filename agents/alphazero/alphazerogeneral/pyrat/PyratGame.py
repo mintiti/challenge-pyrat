@@ -33,20 +33,16 @@ class PyratGame(Game):
                             2) Maze_right
                             3) Maze_down
                             4) Pieces of cheese location
-                            5) Player 1 score
-                            6) Player 2 score
-                            7) Player 1 location
-                            8) Player 2 location
-                            9) Player whose turn it is to play
-                            10) Number of turns since the beginning
+                            5) Player score
+                            6) Opponent score
+                            7) Player location
+                            8) Opponent location
+                            9) Number of turns since the beginning
                             """
         self.env = env  # This is basically just a maze generator
         self.current_board = None
         self.rat_action = None
 
-        # Precompute
-        self.RAT_matrix = np.full((1, 21, 15), RAT, dtype= np.float16)
-        self.PYTHON_matrix = np.full((1, 21, 15), PYTHON, dtype= np.float16)
 
     def getInitBoard(self):
         """
@@ -56,7 +52,7 @@ class PyratGame(Game):
         """
         initial_state = self.env.reset()
         turns = np.zeros((1, 21, 15), dtype= np.float16)
-        self.current_board = np.concatenate((initial_state, self.RAT_matrix, turns))
+        self.current_board = np.concatenate((initial_state, turns))
         return self.current_board
 
     def getBoardSize(self):
@@ -85,20 +81,12 @@ class PyratGame(Game):
             nextPlayer: player who plays in the next turn (should be -player)
         """
         self.current_board = np.copy(board)
-        self.rat_action = previous_move
-        if self.current_board[9][0][0] == PYTHON:
-            self.rat_action = previous_move
-            python_action = action
-        elif self.current_board[9][0][0] == RAT:
-            self.rat_action = action
-            python_action = previous_move
 
         if player == -1:
-            # make the move with the previous rat action and the new action
-            self._make_move(self.rat_action, python_action)  # move, remove cheese and take care of scores
-            self.current_board[10] += 1
-
-        self.current_board[9] *= -1
+            # make the move with the previous player's action and the current player's action
+            self._make_move(action, previous_move)  # move, remove cheese and take care of scores
+            self.current_board[9] += 1
+        self._switch_perspective()
 
         return self.current_board, - player
 
@@ -127,24 +115,24 @@ class PyratGame(Game):
 
         """
         self.board = np.copy(board)
-        nb_turns = self.current_board[10][0][0]
-        p1_score = self.current_board[5][0][0]
-        p2_score = self.current_board[6][0][0]
-        if player == PYTHON:
+        nb_turns = self.current_board[9][0][0]
+        player_score = self.current_board[5][0][0]
+        opponent_score = self.current_board[6][0][0]
+        if player == -1:
             if nb_turns >= 200:
-                if p1_score > p2_score:
+                if player_score > opponent_score:
                     return 1
-                elif p1_score == p2_score:
+                elif player_score == opponent_score:
                     return 0.00000001
                 else:
                     return -1
 
             else:
-                if p1_score > 20.5:
+                if player_score > 20.5:
                     return 1
-                elif p2_score > 20.5:
+                elif opponent_score > 20.5:
                     return -1
-                elif p1_score == 20.5 and p2_score == 20.5:
+                elif player_score == 20.5 and opponent_score == 20.5:
                     return 0.00000001
         return 0
 
@@ -189,11 +177,11 @@ class PyratGame(Game):
         """
         return board.tostring()
 
-    def _make_move(self, rat_action, python_action):
+    def _make_move(self, player_action, opponent_action):
         """Makes the players move, then checks if cheeses have been taken and
             calculate the scores accordingly
-            :arg rat_action : The rat's action
-            :arg python_action : the python's action
+            :arg player_action : The player's action
+            :arg opponent_action : the opponent's action
 
             :return : None"""
         # make the move (move the players)
@@ -201,34 +189,46 @@ class PyratGame(Game):
         # take out the cheeses if needed
 
         # move the players
-        rat_position = np.where(self.current_board[7] == 1)
-        if self.current_board[rat_action][rat_position[0][0]][rat_position[1][0]]:
+        player_position = np.where(self.current_board[7] == 1)
+        if self.current_board[player_action][player_position[0][0]][player_position[1][0]] == 1:
             # Select the right board transform
-            board_transform = self.board_transform_dict[rat_action]
+            board_transform = self.board_transform_dict[player_action]
             # apply it to the player's position
             self.current_board[7] = board_transform(self.current_board[7])
 
-        python_position = np.where(self.current_board[8] == 1)
-        if self.current_board[python_action][python_position[0][0]][python_position[1][0]]:
+        opponent_position = np.where(self.current_board[8] == 1)
+        if self.current_board[opponent_action][opponent_position[0][0]][opponent_position[1][0]] == 1:
             # Select the right board transform
-            board_transform = self.board_transform_dict[python_action]
+            board_transform = self.board_transform_dict[opponent_action]
             self.current_board[8] = board_transform(self.current_board[8])
 
         # recalculate the scores
-        if self.current_board[4][rat_position[0][0]][rat_position[1][0]]:  # check if there's a cheese on player 1
-            if python_position == rat_position:
+        if self.current_board[4][player_position[0][0]][player_position[1][0]] == 1:  # check if there's a cheese on player 1
+            if opponent_position == player_position:
                 # Add 0.5 to each player's scores
                 self.current_board[5] += 0.5
                 self.current_board[6] += 0.5
             else:
                 self.current_board[5] += 1
-            self.current_board[4][rat_position[0][0]][rat_position[1][0]] = 0
+            self.current_board[4][player_position[0][0]][player_position[1][0]] = 0
 
-        if self.current_board[4][python_position[0][0]][python_position[1][0]]:
+        if self.current_board[4][opponent_position[0][0]][opponent_position[1][0]]:
             self.current_board[6] += 1
-            self.current_board[4][python_position[0][0]][python_position[1][0]] = 0
+            self.current_board[4][opponent_position[0][0]][opponent_position[1][0]] = 0
 
         self.rat_action = None
+
+    def _switch_perspective(self):
+        old_player_score = np.copy(self.current_board[5])
+        old_player_location = np.copy(self.current_board[7])
+
+        # make the current player's location and score the opponent's
+        self.current_board[5] = self.current_board[6]
+        self.current_board[7] = self.current_board[8]
+
+        # make the oppoennt the current player
+        self.current_board[6] = old_player_score
+        self.current_board[8] = old_player_location
 
 
 class Symmetries:
