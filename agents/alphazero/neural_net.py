@@ -118,6 +118,8 @@ class ResidualNet(NeuralNet):
         for epoch in range(args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
             self.nn.train()
+            running_pi_loss = 0
+            running_v_loss = 0
             data_time = AverageMeter()
             batch_time = AverageMeter()
             pi_losses = AverageMeter()
@@ -150,6 +152,8 @@ class ResidualNet(NeuralNet):
                 # record losses
                 pi_losses.update(policy_loss.item())
                 v_losses.update(total_loss.item())
+                running_v_loss += value_loss.item()
+                running_pi_loss += policy_loss.item()
 
                 # compute gradient and do SGD step
                 optimizer.zero_grad()
@@ -162,16 +166,6 @@ class ResidualNet(NeuralNet):
                 batch_idx += 1
 
                 # plot progress
-                bar.suffix = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss_pi: {lpi:.4f} | Loss_v: {lv:.3f}'.format(
-                    batch=batch_idx,
-                    size=int(len(examples) / args.batch_size),
-                    data=data_time.avg,
-                    bt=batch_time.avg,
-                    total=bar.elapsed_td,
-                    eta=bar.eta_td,
-                    lpi=pi_losses.avg,
-                    lv=v_losses.avg,
-                )
                 print(
                     '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss_pi: {lpi:.4f} | Loss_v: {lv:.3f}'.format(
                         batch=batch_idx,
@@ -186,6 +180,9 @@ class ResidualNet(NeuralNet):
                 bar.next()
             bar.finish()
         self.clear_cache()
+        infos = {"value_loss" : running_v_loss / float(len(examples)),
+                 "policy_loss" : running_pi_loss / float(len(examples))}
+        return infos
 
     @cachedmethod(lambda self: self.cache, key=lambda board: board.tostring())
     def predict(self, board):

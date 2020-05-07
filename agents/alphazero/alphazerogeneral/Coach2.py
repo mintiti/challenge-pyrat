@@ -82,6 +82,9 @@ class Coach2:
         for i in range(1, self.args.numIters + 1):
             # bookkeeping
             print('------ITER ' + str(i) + '------')
+            # load the best net
+            self.pnet.load_checkpoint(folder=self.args.checkpoint, filename='best.pth.tar')
+
             # examples of the iteration
             if not self.skipFirstSelfPlay or i > 1:
                 iterationTrainExamples = deque([], maxlen=self.args.maxlenOfQueue)
@@ -91,8 +94,8 @@ class Coach2:
                 end = time.time()
 
                 for eps in trange(self.args.numEps, desc = "Running self-play episodes", unit = "episode"):
-                    print(f"starting episode {eps +1}")
-                    self.mcts = MCTS2(self.game, self.nnet, self.args)  # reset search tree
+                    print(f"\nstarting episode {eps +1}")
+                    self.mcts = MCTS2(self.game, self.pnet, self.args)  # reset search tree, use the best network to produce games
                     iterationTrainExamples += self.executeEpisode()
 
                     # bookkeeping + plot progress
@@ -121,12 +124,11 @@ class Coach2:
                 trainExamples.extend(e)
             shuffle(trainExamples)
 
-            # training new network, keeping a copy of the old one
-            self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
-            self.pnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
-            pmcts = MCTS2(self.game, self.pnet, self.args)
+            # training new network, saving the progress
 
             self.nnet.train(trainExamples)
+            self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
+            pmcts = MCTS2(self.game, self.pnet, self.args)
             nmcts = MCTS2(self.game, self.nnet, self.args)
 
             print('PITTING AGAINST PREVIOUS VERSION')
