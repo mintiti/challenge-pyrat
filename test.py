@@ -7,33 +7,87 @@ import numpy as np
 import random
 import time
 from agents.alphazero.parallel.mcts import RootParentNode, Node, DEFAULT_MCTS_PARAMS, MCTS
-class NeuralNetWrapper :
-    def __init__(self, nb_filters, nb_residual_blocks):
-        self.model = ResidualNet(nb_filters, nb_residual_blocks)
+from agents.alphazero.parallel.coach import Coach, NeuralNetWrapper
+from agents.alphazero.parallel.buffer import ReplayBuffer
+from torch.utils.tensorboard import SummaryWriter
 
-    def compute_priors_and_value(self,obs):
-        return self.model.predict(obs)
 
-if __name__ == '__main__':
+def test_mcts():
     game = AlphaZero(PyratEnv(symmetry=False, mud_density=0, start_random=True, target_density=0))
     pyratgame = PyratGame(game)
     obs = pyratgame.getInitBoard()
     # player = -1
-    #
-    model = NeuralNetWrapper(64, 3)
-    model.model.load_checkpoint(folder="temp/3x64", filename='best.pth.tar')
-    mcts = MCTS(model, DEFAULT_MCTS_PARAMS)
-    root_parent  = RootParentNode(pyratgame)
 
     DEFAULT_MCTS_PARAMS["num_simulations"] = 10
+    model = NeuralNetWrapper(64, 3)
+    model.model.load_checkpoint(folder=".", filename='weights-Supervised-3x64-epoch35.pt')
+    mcts = MCTS(model, DEFAULT_MCTS_PARAMS)
+    root_parent = RootParentNode(pyratgame)
 
-    root_node = Node(action= None, obs = obs[:10], done= False, reward=0, state= obs, player=1, mcts= mcts, parent= root_parent)
+    root_node = Node(action=None, obs=obs[:9], done=False, reward=0, state=obs, player=1, mcts=mcts, parent=root_parent)
 
-    mcts.compute_action(root_node)
+    tree, action, child_node = mcts.compute_action(root_node)
 
-
-
-
+    return tree, action, child_node
 
 
+def test_coach():
+    args = {
+        'numIters': 1000,
+        'numEps': 20,  # Number of complete self-play games to simulate during a new iteration.
+        'updateThreshold': 0.5790,
+        # During arena playoff, new neural net will be accepted if threshold or more of games are won.
+        'buffer_size': 500000,  # Number of game examples to train the neural networks.
+        'arenaCompare': 20,  # Number of games to play during arena play to determine if new net will be accepted.
+        'min_buffer_size': 100000,
+        'self_play_mcts_params': {
+            "temperature": 1,
+            "add_dirichlet_noise": True,
+            "dirichlet_epsilon": 0.25,
+            "dirichlet_noise": 2.5,
+            "num_simulations": 600,
+            "exploit": False,
+            "puct_coefficient": 2,
+            "argmax_tree_policy": False,
+            'temp_threshold': 20
+        },
+
+        'eval_mcts_params': {
+            "temperature": 1,
+            "add_dirichlet_noise": False,
+            "dirichlet_epsilon": 0.25,
+            "dirichlet_noise": 2.5,
+            "num_simulations": 600, #number of mcts games to simulate
+            "exploit": True,
+            "puct_coefficient": 2,
+            "argmax_tree_policy": True
+        },
+
+        'checkpoint': './temp/3x64/',
+        'load_model': False,
+        'load_folder_file': ('/dev/models/3x64/', 'best.pth.tar'),
+        'numItersForTrainExamplesHistory': 20,
+
+        # NN config
+        'residual_blocks': 3,
+        'filters': 64,
+    }
+
+    nmodel = NeuralNetWrapper(args['filters'], args['residual_blocks'])
+    nmodel.load_checkpoint(folder=args['checkpoint'] + 'models/', filename='best.pth.tar')
+    env = AlphaZero(PyratEnv(symmetry=False, mud_density=0, start_random=True, target_density=0))
+    pyratgame = PyratGame(env)
+    buffer = ReplayBuffer(args['checkpoint']+'examples/', maxlen= args['buffer_size'])
+    logger = SummaryWriter()
+
+    c = Coach(pyratgame,nmodel, args, buffer, logger)
+    c.fill_buffer()
+
+    c.learn()
+    return c
+
+
+
+if __name__ == '__main__':
+    test_coach()
 
