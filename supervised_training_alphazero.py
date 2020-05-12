@@ -41,6 +41,8 @@ def loss_v(targets, outputs):
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    load_previous = True
+
     # Tensorboard
     writer = SummaryWriter()
 
@@ -66,7 +68,11 @@ if __name__ == '__main__':
 
     # create the net
     net = AlphaZeroNetwork(args.filters, args.residual_blocks)
+    weights = torch.load("weights-Supervised-3x64-epoch20.pt")
+    net.load_state_dict(weights['state_dict'])
     net.to(device)
+
+
     lr = 0.00001
 
     optimizer = optim.Adam(net.parameters(), lr=lr)
@@ -151,6 +157,6 @@ if __name__ == '__main__':
 
         print(f"\nOn epoch {epoch + 1} : value loss {v_loss} and policy loss {pi_loss}\nMove prediction accuracy train {correct_train / len_train} and test {correct_test/len_test}")
 
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 5 == 0:
             torch.save({'state_dict': net.state_dict()},
-                       f"weights-Supervised-{args.residual_blocks}x{args.filters}-epoch{epoch + 1}.pt")
+                       f"weights-Supervised-{args.residual_blocks}x{args.filters}-epoch{epoch + 1 + 20}.pt")
