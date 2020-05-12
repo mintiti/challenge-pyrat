@@ -212,7 +212,7 @@ class PyratGame(Game):
                 self.current_board[5] += 1
             self.current_board[4][player_position[0][0]][player_position[1][0]] = 0
 
-        if self.current_board[4][opponent_position[0][0]][opponent_position[1][0]]:
+        if self.current_board[4][opponent_position[0][0]][opponent_position[1][0]] == 1:
             self.current_board[6] += 1
             self.current_board[4][opponent_position[0][0]][opponent_position[1][0]] = 0
 
@@ -258,7 +258,6 @@ class Symmetries:
 
     def _vertical_flip_pi(self, pi):
         return_pi = [pi[0], pi[3], pi[2], pi[1]]
-        pi[0], pi[2] = pi[2], pi[0]
         return return_pi
 
     def _vertical_flip(self, obs, pi):
