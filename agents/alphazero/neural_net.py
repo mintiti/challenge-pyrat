@@ -73,7 +73,7 @@ class PolicyHead(nn.Module):
 class AlphaZeroNetwork(nn.Module):
     def __init__(self, nb_filters, nb_residual_blocks):
         super(AlphaZeroNetwork, self).__init__()
-        self.conv_layer = nn.Sequential(nn.Conv2d(10, nb_filters, (3, 3), padding=1),
+        self.conv_layer = nn.Sequential(nn.Conv2d(9, nb_filters, (3, 3), padding=1),
                                         nn.BatchNorm2d(nb_filters),
                                         nn.ReLU())
         self.residual_layers = nn.ModuleList([BasicResidualBlock(nb_filters) for _ in range(nb_residual_blocks)])
