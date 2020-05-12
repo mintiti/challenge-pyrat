@@ -96,19 +96,21 @@ class Node:
         self.is_expanded = True
         self.child_priors = child_priors
 
-    def get_child(self, action,  current_player = 1):
+    def get_child(self, action):
         """Gets the child of the current node when action a is done"""
         if action not in self.children:
             #self.game.set_state(self.state)
             #obs, reward, done, _ = self.game.step(action)
             next_state, next_player = self.game.getNextState(self.state,self.current_player,action, previous_move = self.action)
             reward = 0
-            game_ended = self.game.getGameEnded(self.state, self.current_player)
+            game_ended = self.game.getGameEnded(next_state, -1)
             done = (game_ended != 0)
+            if self.done == True:
+                done = True
             if game_ended == 1 or game_ended == -1:
                 reward = game_ended
 
-            obs  = next_state[:10]
+            obs  = next_state[:9]
             self.children[action] = Node(
                 state=next_state,
                 action=action,
@@ -149,6 +151,14 @@ class MCTS:
         self.exploit = mcts_param["argmax_tree_policy"]
         self.add_dirichlet_noise = mcts_param["add_dirichlet_noise"]
         self.c_puct = mcts_param["puct_coefficient"]
+
+    def eval(self):
+        self.exploit = True
+        self.add_dirichlet_noise = False
+
+    def self_play(self):
+        self.exploit = False
+        self.add_dirichlet_noise = True
 
     def compute_action(self, node):
         for _ in range(self.num_sims):
