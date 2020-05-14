@@ -1,19 +1,20 @@
-from agents.alphazero.alphazerogeneral.pyrat.PyratGame import PyratGame, Symmetries
-from agents.alphazero.alphazerogeneral import MCTS2
-from agents.alphazero.neural_net import ResidualNet
+from agents.alphazero.alphazerogeneral.pyrat.PyratGame import PyratGame
 from pyrat_env.envs import PyratEnv
 from pyrat_env.wrappers import AlphaZero
 import numpy as np
 import random
 import time
 from agents.alphazero.parallel.mcts import RootParentNode, Node, DEFAULT_MCTS_PARAMS, MCTS
-from agents.alphazero.parallel.coach import Coach, NeuralNetWrapper
+from agents.alphazero.parallel.coach import Coach, NeuralNetWrapper, SelfPlayActor, InferenceActor, LearningActor
 from agents.alphazero.parallel.buffer import ReplayBuffer
+from agents.alphazero.parallel.arena import Arena
 from torch.utils.tensorboard import SummaryWriter
 import ray
+from ray.util import ActorPool
+
 args = {
     'numIters': 1000,
-    'numEps': 20,  # Number of complete self-play games to simulate during a new iteration.
+    'numEps': 40,  # Number of complete self-play games to simulate during a new iteration.
     'updateThreshold': 0.5790,
     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'buffer_size': 500000,  # Number of game examples to train the neural networks.
@@ -43,26 +44,130 @@ args = {
     },
 
     'checkpoint': './temp/3x64/',
-    'load_model': False,
+    'load_model': True,
     'load_folder_file': ('/dev/models/3x64/', 'best.pth.tar'),
-    'numItersForTrainExamplesHistory': 20,
 
     # NN config
     'residual_blocks': 3,
     'filters': 64,
+
+    # Worker config
+    'num_models': 3,
+    'num_workers_model': 1,
+
 }
 
+
+def get_training_samples(model_creator, game, args):
+    # create the actor pool
+    start = time.time()
+    nb_models = args['num_models']
+    nb_workers_per_model = args['num_workers_model']
+    models = [model_creator() for _ in range(nb_models)]
+    actors = []
+    for model in models:
+        for _ in range(nb_workers_per_model):
+            actors.append(SelfPlayActor.remote(model, args['self_play_mcts_params'], game))
+    actor_pool = ActorPool(actors)
+
+    # Launch the games
+    nb_games = args['numEps']
+    m = actor_pool.map_unordered(lambda a, v: a.play.remote(v)[0], [i + 1 for i in range(nb_games)])
+
+    results = [res for res in m]
+    print(f"played {nb_games} in {time.time() - start}s")
+    return results
 
 
 def train():
     nmodel = NeuralNetWrapper(args['filters'], args['residual_blocks'])
-    nmodel.load_checkpoint(folder=args['checkpoint'] + 'models/', filename='best.pth.tar')
+    nmodel.load_checkpoint(folder=args['checkpoint'] + 'models/', filename='temp.pth.tar')
     env = AlphaZero(PyratEnv(symmetry=False, mud_density=0, start_random=True, target_density=0))
     pyratgame = PyratGame(env)
     buffer = ReplayBuffer(args['checkpoint'] + 'examples/', maxlen=args['buffer_size'])
+    buffer.load()
+    print(len(buffer))
     logger = SummaryWriter()
 
     c = Coach(pyratgame, nmodel, args, buffer, logger)
-    c.fill_buffer()
+    # c.fill_buffer()
 
     c.learn()
+
+def learn_on_buffer(buffer):
+    learning_model = create_learning_model()
+    infos = learning_model.train.remote(buffer.storage)
+    ray.get(infos)
+    ray.get(learning_model.save_checkpoint.remote(folder=args['checkpoint'] + 'models/', filename='temp.pth.tar'))
+
+
+def create_best_net_inference():
+    pmodel = InferenceActor.remote(args['filters'], args['residual_blocks'])
+    ray.get(pmodel.load_checkpoint.remote(folder=args['checkpoint'] + 'models/', filename='best.pth.tar'))
+    return pmodel
+
+def create_best_net():
+    nmodel = NeuralNetWrapper(args['filters'], args['residual_blocks'])
+    nmodel.load_checkpoint(folder=args['checkpoint'] + 'models/', filename='best.pth.tar')
+    return nmodel
+
+def create_latest_net():
+    nmodel = NeuralNetWrapper(args['filters'], args['residual_blocks'])
+    nmodel.load_checkpoint(folder=args['checkpoint'] + 'models/', filename='temp.pth.tar')
+    return nmodel
+
+def create_learning_model():
+    learner = LearningActor.remote(args['filters'], args['residual_blocks'])
+    ray.get(learner.load_checkpoint.remote(folder=args['checkpoint'] + 'models/', filename='temp.pth.tar'))
+    return learner
+
+def train_parallel():
+    # Preparation
+    # Load the buffer
+    buffer = ReplayBuffer(args['checkpoint'] + 'examples/', maxlen=args['buffer_size'])
+    buffer.load()
+    print(f"Buffer loaded. Buffer size {len(buffer)}")
+    # Create the game
+    env = AlphaZero(PyratEnv(symmetry=False, mud_density=0, start_random=True, target_density=0))
+    pyratgame = PyratGame(env)
+    for i in range(args['numIters']):
+        print('------ITER ' + str(i) + '------')
+        # get the data
+        print(f"Starting {args['numEps']} self-play games...")
+        train_examples = get_training_samples(create_best_net_inference, pyratgame, args)
+        # store the data
+        for ep_samples in train_examples:
+            buffer.store(ep_samples)
+
+        # shuffle examples
+        buffer.shuffle()
+        buffer.save()
+
+        # train the net on the data
+        learn_on_buffer(buffer)
+
+        # Run evaluation games
+        # Run the eval games
+        pnet = create_best_net()
+        nnet = create_latest_net()
+        eval_params = args['eval_mcts_params']
+        pmcts = MCTS(pnet, eval_params)
+        nmcts = MCTS(nnet, eval_params)
+        arena = Arena(pmcts, nmcts, pyratgame)
+
+        pWon, nWon, draws = arena.playGames(args['arenaCompare'])
+
+        print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nWon, pWon, draws))
+        if pWon + nWon == 0 or float(nWon) / (pWon + nWon) < args['updateThreshold']:
+            print('REJECTING NEW MODEL')
+        else:
+            print('ACCEPTING NEW MODEL')
+            nnet.save_checkpoint(folder=args['checkpoint'] + 'models/',
+                                      filename= 'checkpoint_' + buffer.get_n_iters()+ '.pth.tar')
+            nnet.save_checkpoint(folder=args['checkpoint'] + 'models/', filename='best.pth.tar')
+            nnet.clear_cache()
+
+if __name__ == '__main__':
+    ray.init(num_gpus=1)
+
+    train_parallel()
