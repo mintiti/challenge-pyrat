@@ -4,7 +4,7 @@ import time
 from tqdm.auto import trange
 
 
-class Arena2():
+class Arena2:
     #TODO : reset the mcts dicts 
     """
     An Arena class where any 2 agents can be pit against each other.
@@ -57,16 +57,14 @@ class Arena2():
             if valids[action] == 0:
                 print(action)
                 assert valids[action] > 0
-            if curPlayer == 1:
-                board, curPlayer = self.game.getNextState(board, curPlayer, action)
-            elif curPlayer == -1:
-                board, curPlayer = self.game.getNextState(board, curPlayer, action, previous_move=previous_move)
+
+            board, curPlayer = self.game.getNextState(board, curPlayer, action, previous_move=previous_move)
 
             previous_move = action
 
         if verbose:
             assert (self.display)
-            print(f"\nGame over: Turn {board[10][0][0]}", "Result ", str(self.game.getGameEnded(board, -1)))
+            print(f"\nGame over: Turn {board[9][0][0]}", "Result ", str(self.game.getGameEnded(board, -1)))
             print(f"""Rat score : {board[5][0][0]}
 Python score : {board[6][0][0]}""")
             # self.display(board[0::4,:,:])
