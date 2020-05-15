@@ -56,19 +56,15 @@ class Coach2:
             pi = self.mcts.getActionProb(canonicalBoard, temp=temp)
             sym = self.game.getSymmetries(canonicalBoard, pi)
             for b, p in sym:
-                trainExamples.append([b, b[9][0][0], p, None])
-
+                trainExamples.append([b, self.curPlayer, p, None])
             action = np.random.choice(len(pi), p=pi)
-            if self.curPlayer == 1:
-                board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action)
-            elif self.curPlayer == -1:
-                board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action,
-                                                               previous_move=previous_move)
+            board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action,
+                                                           previous_move=previous_move)
 
             r = self.game.getGameEnded(board, self.curPlayer)
             previous_move = action
             if r != 0:
-                return [(x[0][:10], x[2], r * x[0][9][0][0]) for x in trainExamples]
+                return [(x[0][:9], x[2], r * ((-1) ** (x[1] != self.curPlayer))) for x in trainExamples]
 
     def learn(self):
         """
@@ -93,9 +89,10 @@ class Coach2:
                 bar = Bar('Self Play', max=self.args.numEps)
                 end = time.time()
 
-                for eps in trange(self.args.numEps, desc = "Running self-play episodes", unit = "episode"):
-                    print(f"\nstarting episode {eps +1}")
-                    self.mcts = MCTS2(self.game, self.pnet, self.args)  # reset search tree, use the best network to produce games
+                for eps in trange(self.args.numEps, desc="Running self-play episodes", unit="episode"):
+                    print(f"\nstarting episode {eps + 1}")
+                    self.mcts = MCTS2(self.game, self.pnet,
+                                      self.args)  # reset search tree, use the best network to produce games
                     iterationTrainExamples += self.executeEpisode()
 
                     # bookkeeping + plot progress
@@ -133,8 +130,8 @@ class Coach2:
 
             print('PITTING AGAINST PREVIOUS VERSION')
             arena = Arena2(pmcts,
-                          nmcts, self.game, display= lambda x : print(x))
-            pwins, nwins, draws = arena.playGames(self.args.arenaCompare, verbose = True)
+                           nmcts, self.game, display=lambda x: print(x))
+            pwins, nwins, draws = arena.playGames(self.args.arenaCompare, verbose=True)
 
             print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
             if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.args.updateThreshold:

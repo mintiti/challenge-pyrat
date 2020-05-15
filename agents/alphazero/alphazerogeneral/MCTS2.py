@@ -127,21 +127,23 @@ class MCTS2():
                     cur_best = u
                     best_act = a
 
-        a = best_act
-        next_s, next_player = self.game.getNextState(canonicalBoard, current_player, a, previous_move= previous_move)
+
+        next_s, next_player = self.game.getNextState(canonicalBoard, current_player, best_act, previous_move= previous_move)
         next_s = self.game.getCanonicalForm(next_s, next_player)
 
-        #print(f"next recursion args : next_s {next_s}, next_player {next_player}, previous move is {previous_move}")
+        previous_move = best_act
+
+        print(f"next recursion args : next_s {next_s}, next_player {next_player}, previous move is {previous_move}")
 
         v = self.search(next_s, previous_move= previous_move, current_player = next_player)
 
-        if (s,a) in self.Qsa:
-            self.Qsa[(s,a)] = (self.Nsa[(s,a)]*self.Qsa[(s,a)] + v)/(self.Nsa[(s,a)]+1)
-            self.Nsa[(s,a)] += 1
+        if (s,best_act) in self.Qsa:
+            self.Qsa[(s,best_act)] = (self.Nsa[(s,best_act)]*self.Qsa[(s,best_act)] + v)/(self.Nsa[(s,best_act)]+1)
+            self.Nsa[(s,best_act)] += 1
 
         else:
-            self.Qsa[(s,a)] = v
-            self.Nsa[(s,a)] = 1
+            self.Qsa[(s,best_act)] = v
+            self.Nsa[(s,best_act)] = 1
 
         self.Ns[s] += 1
         return -v
