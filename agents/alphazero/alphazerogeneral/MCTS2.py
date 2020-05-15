@@ -91,7 +91,7 @@ class MCTS2():
 
         if s not in self.Ps:
             # leaf node
-            nnet_obs = canonicalBoard[:10]
+            nnet_obs = canonicalBoard[:9]
             self.Ps[s], v = self.nnet.predict(nnet_obs)
             valids = self.game.getValidMoves(canonicalBoard, current_player)
             self.Ps[s] = self.Ps[s]*valids      # masking invalid moves
@@ -127,29 +127,23 @@ class MCTS2():
                     cur_best = u
                     best_act = a
 
-        a = best_act
-        if current_player ==-1: # If it's the python's turn
-            next_s, next_player = self.game.getNextState(canonicalBoard, current_player, a, previous_move= previous_move)
-            previous_move = None
-        else:
-            next_s, next_player = self.game.getNextState(canonicalBoard, current_player, a)
-            previous_move = a
+
+        next_s, next_player = self.game.getNextState(canonicalBoard, current_player, best_act, previous_move= previous_move)
         next_s = self.game.getCanonicalForm(next_s, next_player)
 
-        #print(f"next recursion args : next_s {next_s}, next_player {next_player}, previous move is {previous_move}")
+        previous_move = best_act
 
-        if next_player == 1:
-            v = self.search(next_s, current_player = next_player)
-        else :
-            v = self.search(next_s, previous_move = previous_move, current_player= next_player)
+        print(f"next recursion args : next_s {next_s}, next_player {next_player}, previous move is {previous_move}")
 
-        if (s,a) in self.Qsa:
-            self.Qsa[(s,a)] = (self.Nsa[(s,a)]*self.Qsa[(s,a)] + v)/(self.Nsa[(s,a)]+1)
-            self.Nsa[(s,a)] += 1
+        v = self.search(next_s, previous_move= previous_move, current_player = next_player)
+
+        if (s,best_act) in self.Qsa:
+            self.Qsa[(s,best_act)] = (self.Nsa[(s,best_act)]*self.Qsa[(s,best_act)] + v)/(self.Nsa[(s,best_act)]+1)
+            self.Nsa[(s,best_act)] += 1
 
         else:
-            self.Qsa[(s,a)] = v
-            self.Nsa[(s,a)] = 1
+            self.Qsa[(s,best_act)] = v
+            self.Nsa[(s,best_act)] = 1
 
         self.Ns[s] += 1
         return -v

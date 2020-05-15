@@ -8,12 +8,12 @@ import torch
 
 args = dotdict({
     'numIters': 1000,
-    'numEps': 20,  # Number of complete self-play games to simulate during a new iteration.
+    'numEps': 10,  # Number of complete self-play games to simulate during a new iteration.
     'tempThreshold': 40,  #
     'updateThreshold': 0.5790,
     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'maxlenOfQueue': 50000,  # Number of game examples to train the neural networks.
-    'numMCTSSims': 600,  # Number of games moves for MCTS to simulate.
+    'numMCTSSims': 400,  # Number of games moves for MCTS to simulate.
     'arenaCompare': 20,  # Number of games to play during arena play to determine if new net will be accepted.
     'cpuct': 2,
 
@@ -33,11 +33,11 @@ if __name__ == '__main__':
     env = AlphaZero(env)
     game = PyratGame(env)
     nn= ResidualNet(args.filters,args.residual_blocks)
-    nn.load_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
+    nn.load_checkpoint(folder=".", filename='weights-Supervised-3x64-epoch35.pt')
 
 
 
 
     c = Coach2(game, nn, args)
-    c.pnet.load_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
+    c.pnet.load_checkpoint(folder=".", filename='weights-Supervised-3x64-epoch35.pt')
     c.learn()
