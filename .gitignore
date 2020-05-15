@@ -128,3 +128,11 @@ dmypy.json
 temp/
 
 runs/
+
+weights-Supervised-3x64-epoch35.pt
+
+iter1.examples
+
+alphazero_dataset_10k.npz
+
+dev/
