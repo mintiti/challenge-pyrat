@@ -210,6 +210,12 @@ class MCTSActor:
     def set_exploit(self,exploit):
         self.exploit = exploit
 
+    def set_temperature_zero(self):
+        self.temperature = 1/0.01
+
+    def set_temperature_one(self):
+        self.temperature = 1
+
 
     def eval(self):
         self.exploit = True
