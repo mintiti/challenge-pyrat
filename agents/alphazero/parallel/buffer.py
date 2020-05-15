@@ -38,6 +38,8 @@ class ReplayBuffer :
         return n
 
     def load(self):
+        max_len = self.storage.maxlen
+
         n = sum(1 for f in os.listdir(self.path) if os.path.isfile(os.path.join(self.path, f)))
         name = f"iter{n}.examples"
         examplesFile = os.path.join(self.path, name)
@@ -51,6 +53,11 @@ class ReplayBuffer :
             with open(examplesFile, "rb") as f:
                 self.storage = Unpickler(f).load()
             f.closed
+
+            while len(self)> max_len:
+                print("Too much samples... deleting parts of the history")
+                self.storage.popleft()
+                self.storage.maxlen = max_len
 
 @ray.remote
 class RemoteReplayBuffer:
