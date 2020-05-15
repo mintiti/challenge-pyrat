@@ -1,10 +1,8 @@
 from agents.alphazero.alphazerogeneral.pyrat.PyratGame import PyratGame
 from pyrat_env.envs import PyratEnv
 from pyrat_env.wrappers import AlphaZero
-import numpy as np
-import random
 import time
-from agents.alphazero.parallel.mcts import RootParentNode, Node, DEFAULT_MCTS_PARAMS, MCTS
+from agents.alphazero.parallel.mcts import  MCTS
 from agents.alphazero.parallel.coach import Coach, NeuralNetWrapper, SelfPlayActor, InferenceActor, LearningActor
 from agents.alphazero.parallel.buffer import ReplayBuffer
 from agents.alphazero.parallel.arena import Arena
@@ -14,7 +12,7 @@ from ray.util import ActorPool
 
 args = {
     'numIters': 1000,
-    'numEps': 40,  # Number of complete self-play games to simulate during a new iteration.
+    'numEps': 80,  # Number of complete self-play games to simulate during a new iteration.
     'updateThreshold': 0.5790,
     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'buffer_size': 500000,  # Number of game examples to train the neural networks.
@@ -80,8 +78,7 @@ def get_training_samples(model_creator, game, args):
 
 
 def train():
-    nmodel = NeuralNetWrapper(args['filters'], args['residual_blocks'])
-    nmodel.load_checkpoint(folder=args['checkpoint'] + 'models/', filename='temp.pth.tar')
+    nmodel = create_latest_net()
     env = AlphaZero(PyratEnv(symmetry=False, mud_density=0, start_random=True, target_density=0))
     pyratgame = PyratGame(env)
     buffer = ReplayBuffer(args['checkpoint'] + 'examples/', maxlen=args['buffer_size'])
@@ -97,9 +94,9 @@ def train():
 def learn_on_buffer(buffer):
     learning_model = create_learning_model()
     infos = learning_model.train.remote(buffer.storage)
-    ray.get(infos)
+    infos = ray.get(infos)
     ray.get(learning_model.save_checkpoint.remote(folder=args['checkpoint'] + 'models/', filename='temp.pth.tar'))
-
+    return infos
 
 def create_best_net_inference():
     pmodel = InferenceActor.remote(args['filters'], args['residual_blocks'])
@@ -121,9 +118,36 @@ def create_learning_model():
     ray.get(learner.load_checkpoint.remote(folder=args['checkpoint'] + 'models/', filename='temp.pth.tar'))
     return learner
 
+def evaluate(pyratgame,buffer):
+    pnet = create_best_net()
+    nnet = create_latest_net()
+    eval_params = args['eval_mcts_params']
+    pmcts = MCTS(pnet, eval_params)
+    nmcts = MCTS(nnet, eval_params)
+    arena = Arena(pmcts, nmcts, pyratgame)
+
+    pWon, nWon, draws = arena.playGames(args['arenaCompare'])
+    del arena
+    del pmcts
+    del nmcts
+    print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nWon, pWon, draws))
+    if pWon + nWon == 0 or float(nWon) / (pWon + nWon) < args['updateThreshold']:
+        print('REJECTING NEW MODEL')
+    else:
+        print('ACCEPTING NEW MODEL')
+        nnet.save_checkpoint(folder=args['checkpoint'] + 'models/',
+                             filename='checkpoint_' + buffer.get_n_iters() + '.pth.tar')
+        nnet.save_checkpoint(folder=args['checkpoint'] + 'models/', filename='best.pth.tar')
+        nnet.clear_cache()
+    del pnet
+    del nnet
+
+
+
 def train_parallel():
     # Preparation
     # Load the buffer
+    logger = SummaryWriter(log_dir="./runs/t0-3x64")
     buffer = ReplayBuffer(args['checkpoint'] + 'examples/', maxlen=args['buffer_size'])
     buffer.load()
     print(f"Buffer loaded. Buffer size {len(buffer)}")
@@ -131,7 +155,7 @@ def train_parallel():
     env = AlphaZero(PyratEnv(symmetry=False, mud_density=0, start_random=True, target_density=0))
     pyratgame = PyratGame(env)
     for i in range(args['numIters']):
-        print('------ITER ' + str(i) + '------')
+        print('------ITER ' + str(i +1) + '------')
         # get the data
         print(f"Starting {args['numEps']} self-play games...")
         train_examples = get_training_samples(create_best_net_inference, pyratgame, args)
@@ -144,30 +168,20 @@ def train_parallel():
         buffer.save()
 
         # train the net on the data
-        learn_on_buffer(buffer)
+        infos = learn_on_buffer(buffer)
+
+        # Book keeping
+        global_step = buffer.get_n_iters()
+        logger.add_scalars("Training losses", {"Value loss": infos['value_loss'],
+                                               "Policy loss": infos['policy_loss'],
+                                               "Total_loss": infos['value_loss'] + infos['policy_loss']}, global_step)
+
 
         # Run evaluation games
-        # Run the eval games
-        pnet = create_best_net()
-        nnet = create_latest_net()
-        eval_params = args['eval_mcts_params']
-        pmcts = MCTS(pnet, eval_params)
-        nmcts = MCTS(nnet, eval_params)
-        arena = Arena(pmcts, nmcts, pyratgame)
+        evaluate(pyratgame,buffer)
+        
+        time.sleep(1)
 
-        pWon, nWon, draws = arena.playGames(args['arenaCompare'])
-
-        print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nWon, pWon, draws))
-        if pWon + nWon == 0 or float(nWon) / (pWon + nWon) < args['updateThreshold']:
-            print('REJECTING NEW MODEL')
-        else:
-            print('ACCEPTING NEW MODEL')
-            nnet.save_checkpoint(folder=args['checkpoint'] + 'models/',
-                                      filename= 'checkpoint_' + buffer.get_n_iters()+ '.pth.tar')
-            nnet.save_checkpoint(folder=args['checkpoint'] + 'models/', filename='best.pth.tar')
-            nnet.clear_cache()
 
 if __name__ == '__main__':
-    ray.init(num_gpus=1)
-
-    train_parallel()
+    train()
