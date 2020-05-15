@@ -136,3 +136,5 @@ iter1.examples
 alphazero_dataset_10k.npz
 
 dev/
+
+test.py
