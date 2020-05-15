@@ -95,7 +95,7 @@ class Coach:
             print('------ITER ' + str(i) + '------')
             # load the best net
             self.pnet.load_checkpoint(folder=self.args['checkpoint'] + 'models/', filename='best.pth.tar')
-
+            start = time.time()
             # Run self play episodes
             for eps in trange(self.args['numEps'], desc='Running self-play episodes', unit='episode'):
                 print(f"\nstarting episode {eps + 1}")
@@ -112,8 +112,11 @@ class Coach:
             self.nnet.save_checkpoint(folder=self.args['checkpoint'] + 'models/', filename='temp.pth.tar')
 
             # Book keeping
-            self.logger.add_scalar("Policy loss", infos['policy_loss'], self.get_n_iters())
-            self.logger.add_scalar("Value loss", infos['value_loss'], self.get_n_iters())
+            global_step = self.get_n_iters()
+            self.logger.add_scalars("Training losses", {"Value loss": infos['value_loss'],
+                                                   "Policy loss": infos['policy_loss'],
+                                                   "Total_loss": infos['value_loss'] + infos['policy_loss']},
+                               global_step)
 
             self.replay_buffer.save()
             # Run the eval games
@@ -130,12 +133,12 @@ class Coach:
             else:
                 print('ACCEPTING NEW MODEL')
                 self.nnet.save_checkpoint(folder=self.args['checkpoint'] + 'models/',
-                                          filename=self.getCheckpointFile(i))
+                                          filename=self.getCheckpointFile())
                 self.nnet.save_checkpoint(folder=self.args['checkpoint'] + 'models/', filename='best.pth.tar')
                 self.nnet.clear_cache()
 
-    def getCheckpointFile(self, iteration):
-        return 'checkpoint_' + str(iteration) + '.pth.tar'
+    def getCheckpointFile(self):
+        return 'checkpoint_' + str(self.replay_buffer.get_n_iters()) + '.pth.tar'
 
 
 class NeuralNetWrapper:
@@ -232,8 +235,8 @@ class SelfPlayActor:
         episode_step = 0
         while not current_node.done:
             episode_step += 1
-            exploit = episode_step > self_play_params['temp_threshold']
-            self.mcts.set_exploit(exploit)
+            over_threshold = episode_step > self_play_params['temp_threshold']
+            self.mcts.set_exploit(over_threshold)
             # get the tree policy, the action chosen and the next node
             tree, action, next_node = self.mcts.compute_action(current_node)
 
