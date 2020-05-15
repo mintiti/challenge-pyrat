@@ -224,9 +224,4 @@ class ResidualNet(NeuralNet):
         self.nn.load_state_dict(checkpoint['state_dict'])
 
 
-if __name__ == '__main__':
-    mock_state = torch.rand((1, 10, 21, 15))
 
-    net = AlphaZeroNetwork(128, 3)
-    out = net(mock_state)
-    print(out)
