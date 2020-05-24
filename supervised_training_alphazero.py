@@ -21,7 +21,6 @@ args = dotdict({
     'checkpoint': './temp/3x64/',
     'load_model': False,
     'load_folder_file': ('/dev/models/3x64/', 'best.pth.tar'),
-    'numItersForTrainExamplesHistory': 20,
 
     # NN config
     'residual_blocks': 3,
@@ -38,13 +37,14 @@ def loss_v(targets, outputs):
     return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
 
 
+
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     load_previous = True
 
     # Tensorboard
-    writer = SummaryWriter()
+    writer = SummaryWriter(log_dir= "runs/t0-3x64-test-deepmind-config")
 
     # Load the data
     file = "alphazero_dataset_10k.npz"
@@ -68,14 +68,15 @@ if __name__ == '__main__':
 
     # create the net
     net = AlphaZeroNetwork(args.filters, args.residual_blocks)
-    weights = torch.load("weights-Supervised-3x64-epoch20.pt")
-    net.load_state_dict(weights['state_dict'])
+    #weights = torch.load("weights-Supervised-3x64-epoch20.pt")
+    #net.load_state_dict(weights['state_dict'])
     net.to(device)
 
 
-    lr = 0.00001
+    lr = 0.01
 
-    optimizer = optim.Adam(net.parameters(), lr=lr)
+    optimizer = optim.SGD(net.parameters(),lr = lr,momentum=0.9, weight_decay= 0.00001)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4,8,12,14], gamma=0.1)
     epochs = 100
     for epoch in range(epochs):
         print(f"Starting epoch {epoch + 1}")
@@ -96,7 +97,7 @@ if __name__ == '__main__':
 
             p_vector, v = net(x_batch)
             policy_loss = loss_pi(y_batch, p_vector)
-            value_loss = loss_v(z_batch, v)
+            value_loss = 0.01 * loss_v(z_batch, v)
             total_loss = policy_loss + value_loss
 
             # record losses
@@ -125,7 +126,7 @@ if __name__ == '__main__':
 
                 p_vector, v = net(x_batch)
                 policy_loss = loss_pi(y_batch, p_vector)
-                value_loss = loss_v(z_batch, v)
+                value_loss = 0.01 * loss_v(z_batch, v)
                 total_loss = policy_loss + value_loss
 
                 # record losses
@@ -136,27 +137,24 @@ if __name__ == '__main__':
                 predicted_move = torch.argmax(p_vector, dim=1)
                 correct_moves = torch.argmax(y_batch, dim=1)
                 correct_test += (predicted_move == correct_moves).sum()
+                
+        scheduler.step()
 
         # Record to tensorboard
-        writer.add_scalar('Test set/value loss/total', validation_v_loss, epoch)
-        writer.add_scalar('Test set/policy loss/total', validation_pi_loss, epoch)
-        writer.add_scalar('Test set/total loss', validation_pi_loss + validation_v_loss, epoch)
-        writer.add_scalar('Test set/value loss/normalized', validation_v_loss / len_test, epoch)
-        writer.add_scalar('Test set/normalized policy loss', validation_pi_loss / len_test, epoch)
-        writer.add_scalar('Test set/normalized total loss', (validation_pi_loss + validation_v_loss) / len_test, epoch)
-        writer.add_scalar('Test set/move prediction accuracy', correct_test/len_test, epoch)
+        writer.add_scalars("Training losses", {"Value loss": v_loss,
+                                               "Policy loss": pi_loss,
+                                               "Total_loss": v_loss + pi_loss}, epoch)
+        writer.add_scalars("Test losses", {"Value loss": validation_v_loss,
+                                               "Policy loss": validation_pi_loss,
+                                               "Total_loss": validation_v_loss + validation_pi_loss}, epoch)
 
-        writer.add_scalar('Train set/value loss', v_loss, epoch)
-        writer.add_scalar('Train set/policy loss', pi_loss, epoch)
-        writer.add_scalar('Train set/total loss', pi_loss + v_loss, epoch)
-        writer.add_scalar('Train set/normalized value loss', v_loss / len_train, epoch)
-        writer.add_scalar('Train set/normalized policy loss', pi_loss / len_train, epoch)
-        writer.add_scalar('Train set/normalized total loss', pi_loss + v_loss / n, epoch)
-        writer.add_scalar('Train set/move prediction accuracy', correct_train / len_train, epoch)
+        writer.add_scalars("Precisions", {"Validation move prediction accuracy":correct_test/len_test ,
+                                          "Training move prediction accuracy" : correct_train / len_train}, epoch)
 
 
         print(f"\nOn epoch {epoch + 1} : value loss {v_loss} and policy loss {pi_loss}\nMove prediction accuracy train {correct_train / len_train} and test {correct_test/len_test}")
 
         if (epoch + 1) % 5 == 0:
             torch.save({'state_dict': net.state_dict()},
-                       f"weights-Supervised-{args.residual_blocks}x{args.filters}-epoch{epoch + 1 + 20}.pt")
+                       f"weights-Supervised-{args.residual_blocks}x{args.filters}--Deepmind-epoch{epoch + 1}.pt")
+        
