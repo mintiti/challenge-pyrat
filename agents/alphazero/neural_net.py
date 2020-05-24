@@ -12,12 +12,14 @@ import time
 from cachetools import LRUCache, cachedmethod
 
 args = dotdict({
-    'lr': 0.00001,
+    'lr': 0.001,
     'dropout': 0.3,
     'epochs': 2,
     'batch_size': 2048,
     'cuda': torch.cuda.is_available(),
-    'half_precision': True
+    'half_precision': True,
+    'weight_decay' : 0.00001,
+    'momentum' : 0.9
 })
 
 
@@ -105,7 +107,7 @@ class ResidualNet(NeuralNet):
         #     for module in self.nn.modules():
         #         if isinstance(module, nn.BatchNorm2d):
         #             module.float()
-        self.cache = LRUCache(maxsize=200000)
+        self.cache = LRUCache(maxsize=500000)
 
     def clear_cache(self):
         self.cache.clear()
@@ -113,8 +115,8 @@ class ResidualNet(NeuralNet):
 
     def train(self, examples):
         print(len(examples))
-        optimizer = optim.Adam(self.nn.parameters(), lr=args.lr)
-
+        # optimizer = optim.Adam(self.nn.parameters(), lr=args.lr)
+        optimizer = optim.SGD(self.nn.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
         for epoch in range(args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
             self.nn.train()
