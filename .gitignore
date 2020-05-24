@@ -138,3 +138,5 @@ alphazero_dataset_10k.npz
 dev/
 
 test.py
+
+external_examples/
