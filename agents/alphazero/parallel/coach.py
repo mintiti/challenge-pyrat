@@ -69,11 +69,16 @@ class Coach:
     def fill_buffer(self):
         # Load the best net
         self.pnet.load_checkpoint(folder=self.args['checkpoint'] + 'models/', filename='best.pth.tar')
-
+        i = 0
         while len(self.replay_buffer) < self.args['min_buffer_size']:
-            print(f"Filling buffer ...\nBuffer size {len(self.replay_buffer)}")
+            print(f"Filling buffer ...\nBuffer size {len(self.replay_buffer)}\nStarting game {i + 1}")
             episode_examples, end_node = self.execute_episode()
             self.replay_buffer.store(episode_examples)
+            if i%20 == 0:
+                print(f"game {i + 1 }, saving to disk...")
+                self.replay_buffer.temp_save()
+            i+=1
+
         print(f"Buffer size {len(self.replay_buffer)}\nSaving buffer ... ")
         self.replay_buffer.save()
 
@@ -97,15 +102,21 @@ class Coach:
             self.pnet.load_checkpoint(folder=self.args['checkpoint'] + 'models/', filename='best.pth.tar')
             start = time.time()
             # Run self play episodes
+
+            #Book keeping
+            iter_cheese_average = 0
+            iter_turn_average = 0
             for eps in trange(self.args['numEps'], desc='Running self-play episodes', unit='episode'):
                 print(f"\nstarting episode {eps + 1}")
                 episode_examples, end_node = self.execute_episode()
                 self.replay_buffer.store(episode_examples)
 
                 # Book keeping
-                self.logger.add_scalar('Number of turns', end_node.state[9][0][0], self.get_n_iters())
-                self.logger.add_scalar('Number of cheese captures', end_node.state[5][0][0] + end_node.state[6][0][0],
-                                       self.get_n_iters())
+                iter_turn_average += end_node.state[9][0][0]
+                iter_cheese_average += end_node.state[5][0][0] + end_node.state[6][0][0]
+            self.logger.add_scalar('Number of turns', iter_turn_average / self.args['numEps'], self.get_n_iters())
+            self.logger.add_scalar('Number of cheese captures',iter_cheese_average / self.args['numEps'] ,
+                                   self.get_n_iters())
 
             infos = self.nnet.train(self.replay_buffer.storage)
             self.nnet.clear_cache()
@@ -136,6 +147,12 @@ class Coach:
                                           filename=self.getCheckpointFile())
                 self.nnet.save_checkpoint(folder=self.args['checkpoint'] + 'models/', filename='best.pth.tar')
                 self.nnet.clear_cache()
+
+            # Book keeping
+            self.logger.add_scalars("Winrate vs previous version", {"Threshold" : self.args['updateThreshold'],
+                                                                    "Winrate" : float(nWon) / (pWon + nWon),
+                                                                    "Draws" : float(draws / (draws + nWon + pWon))},
+                                    self.get_n_iters())
 
     def getCheckpointFile(self):
         return 'checkpoint_' + str(self.replay_buffer.get_n_iters()) + '.pth.tar'
