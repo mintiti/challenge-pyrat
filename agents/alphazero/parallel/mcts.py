@@ -45,7 +45,7 @@ class Node:
 
     @property
     def number_visits(self):
-        """Returns the number of thimes the current node has been visited"""
+        """Returns the number of times the current node has been visited"""
         return self.parent.child_number_visits[self.action]
 
     @number_visits.setter
@@ -159,6 +159,12 @@ class MCTS:
     def self_play(self):
         self.exploit = False
         self.add_dirichlet_noise = True
+
+    def add_dirichlet_noise(self,node):
+        child_priors = node.child_priors
+        child_priors = (1 - self.dir_epsilon) * child_priors
+        child_priors += self.dir_epsilon * np.random.dirichlet(
+            [self.dir_noise] * child_priors.size)
 
     def compute_action(self, node):
         for _ in range(self.num_sims):
