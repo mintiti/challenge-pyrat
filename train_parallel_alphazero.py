@@ -141,6 +141,8 @@ def evaluate(pyratgame,buffer):
     del pnet
     del nnet
 
+    return pWon,nWon,draws
+
 
 
 def train_parallel():
@@ -175,7 +177,12 @@ def train_parallel():
 
 
         # Run evaluation games
-        evaluate(pyratgame,buffer)
+        pWon,nWon,draws = evaluate(pyratgame,buffer)
+
+        logger.add_scalars("Winrate vs previous version", {"Threshold": args['updateThreshold'],
+                                                                "Winrate": float(nWon) / (pWon + nWon),
+                                                                "Draws": float(draws / (draws + nWon + pWon))},
+                                buffer.get_n_iters())
         
         time.sleep(1)
 
