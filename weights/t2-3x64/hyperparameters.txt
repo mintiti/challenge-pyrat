@@ -1,0 +1,37 @@
+args = {
+    'run_name': "t2-3x63",
+    'numIters': 1000, # number of self-play iterations to play
+    'numEps': 60,  # Number of complete self-play games to simulate during a new iteration.
+    'updateThreshold': 0.5790,
+    # During arena playoff, new neural net will be accepted if threshold or more of games are won.
+    'buffer_size': 500000,  # Number of game examples to train the neural networks.
+    'arenaCompare': 30,  # Number of games to play during arena play to determine if new net will be accepted.
+    'min_buffer_size': 100000,
+    'self_play_mcts_params': {
+        "temperature": 1,
+        "add_dirichlet_noise": True,
+        "dirichlet_epsilon": 0.25,
+        "dirichlet_noise": 2.5,
+        "num_simulations": 600,
+        "exploit": False,
+        "puct_coefficient": 2,
+        "argmax_tree_policy": False,
+        'temp_threshold': 20
+    },
+
+    'eval_mcts_params': {
+        "temperature": 1,
+        "add_dirichlet_noise": False,
+        "dirichlet_epsilon": 0.25,
+        "dirichlet_noise": 2.5,
+        "num_simulations": 600,  # number of mcts games to simulate
+        "exploit": True,
+        "puct_coefficient": 2,
+        "argmax_tree_policy": True
+    },
+
+    'checkpoint': './temp/t2-3x64/',
+    # NN config
+    'residual_blocks': 3,
+    'filters': 64,
+}
