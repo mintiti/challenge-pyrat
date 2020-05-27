@@ -3,7 +3,7 @@ import time
 import ray
 
 from agents.alphazero.neural_net import ResidualNet
-from agents.alphazero.parallel.mcts import RootParentNode, Node
+from agents.alphazero.sequential.mcts import RootParentNode, Node
 from agents.alphazero.ray_training.ray_mcts import MCTSActor
 
 

@@ -4,7 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from agents.alphazero.pyrat.PyratGame import PyratGame
 from agents.alphazero.buffer import ReplayBuffer
-from agents.alphazero.parallel.coach import Coach
+from agents.alphazero.sequential.coach import Coach
 from agents.alphazero.ray_training.ray_coach import NeuralNetWrapper
 from pyrat_env.envs import PyratEnv
 from pyrat_env.wrappers import AlphaZero

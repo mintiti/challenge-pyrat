@@ -2,11 +2,11 @@ from agents.alphazero.pyrat.PyratGame import PyratGame
 from pyrat_env.envs import PyratEnv
 from pyrat_env.wrappers import AlphaZero
 import time
-from agents.alphazero.parallel.mcts import  MCTS
-from agents.alphazero.parallel.coach import Coach
+from agents.alphazero.sequential.mcts import  MCTS
+from agents.alphazero.sequential.coach import Coach
 from agents.alphazero.ray_training.ray_coach import InferenceActor, LearningActor, SelfPlayActor, NeuralNetWrapper
 from agents.alphazero.buffer import ReplayBuffer
-from agents.alphazero.parallel.arena import Arena
+from agents.alphazero.sequential.arena import Arena
 from torch.utils.tensorboard import SummaryWriter
 import ray
 from ray.util import ActorPool
