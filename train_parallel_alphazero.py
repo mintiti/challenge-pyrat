@@ -11,7 +11,8 @@ import ray
 from ray.util import ActorPool
 
 args = {
-    'numIters': 1000,
+    'run_name': "t2-3x63",
+    'numIters': 1000, # number of self-play iterations to play
     'numEps': 60,  # Number of complete self-play games to simulate during a new iteration.
     'updateThreshold': 0.5790,
     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
@@ -21,11 +22,11 @@ args = {
     'self_play_mcts_params': {
         "temperature": 1,
         "add_dirichlet_noise": True,
-        "dirichlet_epsilon": 0,
+        "dirichlet_epsilon": 0.25,
         "dirichlet_noise": 2.5,
         "num_simulations": 600,
         "exploit": False,
-        "puct_coefficient": 3,
+        "puct_coefficient": 2,
         "argmax_tree_policy": False,
         'temp_threshold': 20
     },
@@ -37,11 +38,11 @@ args = {
         "dirichlet_noise": 2.5,
         "num_simulations": 600,  # number of mcts games to simulate
         "exploit": True,
-        "puct_coefficient": 3,
+        "puct_coefficient": 2,
         "argmax_tree_policy": True
     },
 
-    'checkpoint': './temp/t1-3x64/',
+    'checkpoint': './temp/t2-3x64/',
     'load_model': True,
     'load_folder_file': ('/dev/models/3x64/', 'best.pth.tar'),
 
@@ -84,9 +85,9 @@ def train():
     buffer = ReplayBuffer(args['checkpoint'] + 'examples/', maxlen=args['buffer_size'])
     buffer.load()
     print(len(buffer))
-    logger = SummaryWriter(log_dir="./runs/t1-3x64--Deepmind")
+    logger = SummaryWriter(log_dir=f"./runs/{args['run_name']}")
     c = Coach(pyratgame, nmodel, args, buffer, logger)
-    #c.fill_buffer()
+    c.fill_buffer()
 
     c.learn()
 
@@ -148,7 +149,7 @@ def evaluate(pyratgame,buffer):
 def train_parallel():
     # Preparation
     # Load the buffer
-    logger = SummaryWriter(log_dir="./runs/t1-3x64--Deepmind")
+    logger = SummaryWriter(log_dir=f"./runs/{args['run_name']}")
     buffer = ReplayBuffer(args['checkpoint'] + 'examples/', maxlen=args['buffer_size'])
     buffer.load()
     print(f"Buffer loaded. Buffer size {len(buffer)}")
