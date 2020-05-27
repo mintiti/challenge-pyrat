@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from progress.bar import Bar
-from .alphazerogeneral.pytorch_classification.utils import AverageMeter
-from .alphazerogeneral.utils import dotdict
-from .alphazerogeneral.NeuralNet import NeuralNet
+from agents.alphazero.misc import AverageMeter
+from agents.alphazero.utils import dotdict
+from agents.alphazero.NeuralNet import NeuralNet
 import numpy as np
 import os
 import time

@@ -1,11 +1,11 @@
-from agents.alphazero.neural_net import ResidualNet, AlphaZeroNetwork
-from agents.alphazero.alphazerogeneral.utils import *
+from agents.alphazero.neural_net import AlphaZeroNetwork
+from agents.alphazero.utils import *
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
-from tqdm import tqdm, trange
+from tqdm import tqdm
 
 args = dotdict({
     'numIters': 1000,
