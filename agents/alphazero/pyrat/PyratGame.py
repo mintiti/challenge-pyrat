@@ -1,11 +1,11 @@
-from ..Game import Game
+
 import numpy as np
 
 RAT = 1
 PYTHON = -1
 
 
-class PyratGame(Game):
+class PyratGame:
     DECISION_FROM_ACTION_DICT = {
         0: 'L',
         1: 'U',

@@ -1,4 +1,5 @@
-from .mcts import RootParentNode, Node, MCTSActor
+from .mcts import RootParentNode, Node
+from ..ray_training.ray_mcts import MCTSActor
 from tqdm.auto import trange
 import ray
 
