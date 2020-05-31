@@ -57,7 +57,6 @@ class ReplayBuffer :
         name = f"iter{n}.examples"
         examplesFile = os.path.join(self.path, name)
         if not os.path.isfile(examplesFile):
-            print(examplesFile)
             r = input("File with trainExamples not found. Continue? [y|n]")
             if r != "y":
                 sys.exit()
@@ -125,6 +124,7 @@ class RemoteReplayBuffer:
         n = sum(1 for f in os.listdir(self.path) if os.path.isfile(os.path.join(self.path, f)))
         name = f"iter{n}.examples"
         examplesFile = os.path.join(self.path, name)
+        print(examplesFile)
         if not os.path.isfile(examplesFile):
             print(examplesFile)
             r = input("File with trainExamples not found. Continue? [y|n]")
