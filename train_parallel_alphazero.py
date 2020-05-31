@@ -12,7 +12,7 @@ import ray
 from ray.util import ActorPool
 
 args = {
-    'run_name': "t2-3x63",
+    'run_name': "t2-3x64",
     'numIters': 1000, # number of self-play iterations to play
     'numEps': 60,  # Number of complete self-play games to simulate during a new iteration.
     'updateThreshold': 0.5790,
