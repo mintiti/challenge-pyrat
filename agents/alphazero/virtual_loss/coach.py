@@ -51,14 +51,16 @@ class Coach:
             exploit = episode_step > self_play_params['temp_threshold']
             mcts.exploit = exploit
             # get the tree policy, the action chosen and the next node
-            tree, action, next_node = mcts.compute_action(current_node)
+            tree, action, next_node = mcts.tree_search(current_node)
 
             symmetries = self.game.getSymmetries(current_node.obs, tree)
 
             for obs, pi in symmetries:
                 episode_examples.append([obs, current_node.current_player, pi])
 
-            current_node = next_node
+            current_node = mcts.make_move(current_node, action)
+
+        mcts.clear_cache()
 
         return [(x[0], x[2], current_node.reward * ((-1) ** (x[1] != current_node.current_player))) for x in
                 episode_examples], current_node
@@ -117,7 +119,7 @@ class Coach:
                                    self.get_n_iters())
 
             infos = self.nnet.train(self.replay_buffer.storage)
-            self.nnet.clear_cache()
+            #self.nnet.clear_cache()
             self.nnet.save_checkpoint(folder=self.args['checkpoint'] + 'models/', filename='temp.pth.tar')
 
             # Book keeping

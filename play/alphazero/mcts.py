@@ -16,6 +16,28 @@ DEFAULT_MCTS_PARAMS = {
     "puct_coefficient" : 2,
     "argmax_tree_policy" : False
 }
+
+class AddNoiseToRoot:
+    """Context manager to add and remove add_noise to the root node"""
+
+    def __init__(self, node, add_noise=True, dir_epsilon=0.25, dir_noise=2.5):
+        self.node = node
+        self.original_priors = node.child_priors.copy()
+        self.add_noise = add_noise
+        self.dir_epsilon = dir_epsilon
+        self.dir_noise = dir_noise
+
+    def __enter__(self):
+        # Add dirichlet add_noise to the root node
+        if self.add_noise:
+            self.node.child_priors = (1 - self.dir_epsilon) * self.node.child_priors
+            self.node.child_priors += self.dir_epsilon * np.random.dirichlet(
+                [self.dir_noise] * self.node.child_priors.size)
+        return self.node
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Revert the dirichlet add_noise
+        self.node.child_priors = self.original_priors
 class Node:
     def __init__(self, action, obs, done, reward, state, mcts, player, parent=None):
         self.game = parent.game
@@ -28,12 +50,12 @@ class Node:
 
         self.action_space_size = self.game.getActionSize()
         self.child_total_value = np.zeros(
-            [self.action_space_size], dtype=np.float32)  # Q
+            [self.action_space_size], dtype=np.float32)  # Q from the perspective of the child
         self.child_priors = np.zeros(
             [self.action_space_size], dtype=np.float32)  # P
         self.child_number_visits = np.zeros(
             [self.action_space_size], dtype=np.float32)  # N
-        self.valid_actions = [1]*4
+        self.valid_actions = [1] * 4
 
         self.reward = reward
         self.done = done
@@ -64,13 +86,14 @@ class Node:
     def child_Q(self):
         """Returns an array containing the Q values of the children of the current node"""
         # TODO (weak todo) add "softmax" version of the Q-value
-        return self.child_total_value / (1 + self.child_number_visits)
+        return - self.child_total_value / (
+                    1 + self.child_number_visits)  # -1 multiplicator because perspective of parent
 
     def child_U(self):
         """Calculates the U value for each child of the current node.
         :return: Array of size (action space,) """
         return math.sqrt(self.number_visits) * self.child_priors / (
-            1 + self.child_number_visits)
+                1 + self.child_number_visits)
 
     def best_action(self):
         """Chooses the action with the highest PUCT value.
@@ -98,9 +121,10 @@ class Node:
     def get_child(self, action):
         """Gets the child of the current node when action a is done"""
         if action not in self.children:
-            #self.game.set_state(self.state)
-            #obs, reward, done, _ = self.game.step(action)
-            next_state, next_player = self.game.getNextState(self.state,self.current_player,action, previous_move = self.action)
+            # self.game.set_state(self.state)
+            # obs, reward, done, _ = self.game.step(action)
+            next_state, next_player = self.game.getNextState(self.state, self.current_player, action,
+                                                             previous_move=self.action)
             reward = 0
             game_ended = self.game.getGameEnded(next_state, -1)
             done = (game_ended != 0)
@@ -109,7 +133,7 @@ class Node:
             if game_ended == 1 or game_ended == -1:
                 reward = game_ended
 
-            obs  = next_state[:9]
+            obs = next_state[:9]
             self.children[action] = Node(
                 state=next_state,
                 action=action,
@@ -118,7 +142,7 @@ class Node:
                 done=done,
                 obs=obs,
                 mcts=self.mcts,
-                player= next_player)
+                player=next_player)
         return self.children[action]
 
     def backup(self, value):
@@ -126,10 +150,10 @@ class Node:
             :arg v: the value as evaluated at a leaf node (game ended) or by the neural network"""
         current = self
         while current.parent is not None:
-            value *= -1
             current.number_visits += 1
             current.total_value += value
             current = current.parent
+            value *= -1
 
 
 class RootParentNode:
@@ -159,21 +183,26 @@ class MCTS:
         self.exploit = False
         self.add_dirichlet_noise = True
 
-    def compute_action(self, node):
-        for _ in range(self.num_sims):
-            leaf = node.select()
-            if leaf.done:
-                value = leaf.reward
-            else:
-                child_priors, value = self.model.compute_priors_and_value(
-                    leaf.obs)
-                if self.add_dirichlet_noise:
-                    child_priors = (1 - self.dir_epsilon) * child_priors
-                    child_priors += self.dir_epsilon * np.random.dirichlet(
-                        [self.dir_noise] * child_priors.size)
+    def add_dirichlet_noise(self, node):
+        child_priors = node.child_priors
+        child_priors = (1 - self.dir_epsilon) * child_priors
+        child_priors += self.dir_epsilon * np.random.dirichlet(
+            [self.dir_noise] * child_priors.size)
 
-                leaf.expand(child_priors)
-            leaf.backup(value)
+    def compute_action(self, node):
+        with AddNoiseToRoot(node, add_noise=self.add_dirichlet_noise,
+                            dir_noise=self.dir_noise,
+                            dir_epsilon=self.dir_epsilon):
+            for _ in range(self.num_sims):
+                leaf = node.select()
+                if leaf.done:
+                    value = leaf.reward
+                else:
+                    child_priors, value = self.model.compute_priors_and_value(
+                        leaf.obs)
+
+                    leaf.expand(child_priors)
+                leaf.backup(value)
 
         # Tree policy target (TPT)
         tree_policy = node.child_number_visits / node.number_visits

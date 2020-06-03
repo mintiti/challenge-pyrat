@@ -1,0 +1,6 @@
+Try from scratch, completely unsupervised
+Try with walls
+Try with different hyperparameters (cpuct for example)
+Try with different networks (bigger/smaller)
+Try with fp16 training
+

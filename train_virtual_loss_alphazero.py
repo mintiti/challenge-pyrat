@@ -2,11 +2,11 @@ from agents.alphazero.pyrat.PyratGame import PyratGame
 from pyrat_env.envs import PyratEnv
 from pyrat_env.wrappers import AlphaZero
 import time
-from agents.alphazero.sequential.mcts import  MCTS
-from agents.alphazero.sequential.coach import Coach
+from agents.alphazero.virtual_loss.mcts import  MCTS
+from agents.alphazero.virtual_loss.coach import Coach
 from agents.alphazero.ray_training.ray_coach import InferenceActor, LearningActor, SelfPlayActor, NeuralNetWrapper
 from agents.alphazero.buffer import ReplayBuffer
-from agents.alphazero.sequential.arena import Arena
+from agents.alphazero.virtual_loss.arena import Arena
 from torch.utils.tensorboard import SummaryWriter
 import ray
 from ray.util import ActorPool
@@ -30,7 +30,7 @@ args = {
         "puct_coefficient": 2,
         "argmax_tree_policy": False,
         'temp_threshold': 20,
-        'virtual_loss_batch_size' : 8
+        'virtual_loss_batch_size' : 16
     },
 
     'eval_mcts_params': {
